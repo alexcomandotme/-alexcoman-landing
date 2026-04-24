@@ -8,15 +8,15 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-  background: transparent;
-  font-family: 'JetBrains Mono', monospace;
-  padding: 2rem;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
+  body {
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 
   .term-header {
     font-size: 11px;
@@ -38,6 +38,7 @@ body {
   .term-output .bright { color: #fff; }
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
+  .term-output .ai { color: #5DCAA5; }
 
   .term-input-row {
     display: flex;
@@ -65,9 +66,7 @@ body {
     caret-color: #fff;
   }
 
-  #term-input::placeholder {
-    color: rgba(255,255,255,0.2);
-  }
+  #term-input::placeholder { color: rgba(255,255,255,0.2); }
 
   .hint {
     font-size: 11px;
@@ -98,6 +97,17 @@ body {
 <div class="hint" id="hint">try: help</div>
 
 <script>
+const API_KEY = 'YOUR_API_KEY';
+
+const SYSTEM_PROMPT = `You are a terse terminal assistant living on Alex Coman's portfolio site (alexcoman.me).
+Alex is a post-producer and editor with ~9 years international experience (Amsterdam, Copenhagen, Bucharest).
+He works in film, advertising, and generative/AI art. Tools: TouchDesigner, p5.js, ComfyUI, Premiere, DaVinci.
+Clients include Anomaly Amsterdam, Arla Foods, TBWA, Dentsu.
+
+Personality: dry, minimal, slightly cryptic. Max 2-3 lines per response. No markdown. No emojis.
+If asked about the work or portfolio, hint that it lives in /desktop.
+Never break character. You are a terminal, not a chatbot.`;
+
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 const hint = document.getElementById('hint');
@@ -108,7 +118,10 @@ const responses = {
     { text: '  ls          list what\'s here', cls: '' },
     { text: '  whoami      obvious', cls: '' },
     { text: '  open        open something', cls: '' },
-    { text: '  cd ..       go deeper', cls: '' },
+    { text: '  ai [query]  ask something', cls: '' },
+    { text: '  sudo        don\'t', cls: '' },
+    { text: '  uptime      system stats', cls: '' },
+    { text: '  git log     history', cls: '' },
   ],
   ls: [
     { text: 'drwxr-xr-x  surface/', cls: 'dim' },
@@ -133,6 +146,54 @@ const responses = {
     { text: 'ls: desktop/: permission denied', cls: 'err' },
     { text: 'hint: you need to open it first.', cls: 'dim' },
   ],
+  sudo: [
+    { text: 'alex is not in the sudoers file.', cls: 'err' },
+    { text: 'this incident will be reported.', cls: 'dim' },
+  ],
+  uptime: [
+    { text: '9 years, 3 cities, 1 kid', cls: 'bright' },
+    { text: 'load average: high', cls: 'dim' },
+  ],
+  'git log': [
+    { text: 'commit a1f3c9e  —  add everything that matters', cls: 'bright' },
+    { text: 'commit 88bd201  —  move to amsterdam', cls: '' },
+    { text: 'commit 3c72a10  —  start making films', cls: '' },
+    { text: 'commit 0000001  —  init', cls: 'dim' },
+  ],
+  'man alex': [
+    { text: 'NAME', cls: 'bright' },
+    { text: '     alex coman — post-producer, editor', cls: '' },
+    { text: 'SYNOPSIS', cls: 'bright' },
+    { text: '     alex [film] [commercial] [generative_art]', cls: '' },
+    { text: 'DESCRIPTION', cls: 'bright' },
+    { text: '     9 years. amsterdam, copenhagen, bucharest.', cls: '' },
+    { text: '     makes things move. sometimes on purpose.', cls: '' },
+    { text: 'SEE ALSO', cls: 'bright' },
+    { text: '     open desktop', cls: 'ok' },
+  ],
+  'rm -rf /': [
+    { text: 'nice try.', cls: 'err' },
+  ],
+  'ls music': [
+    { text: 'guitar/', cls: '' },
+    { text: 'piano/', cls: '' },
+    { text: 'synth/', cls: '' },
+    { text: 'unfinished_tracks/   [755 items]', cls: 'dim' },
+  ],
+  'ls photos': [
+    { text: 'drwx------  film/', cls: '' },
+    { text: 'drwx------  medium_format/', cls: '' },
+    { text: 'drwx------  analog/', cls: '' },
+  ],
+  'ping ioana': [
+    { text: 'PING ioana: Request timeout', cls: 'err' },
+  ],
+  vim: [
+    { text: 'type :q! to exit', cls: 'dim' },
+  ],
+  ':q!': [
+    { text: 'nice. you know vim.', cls: 'ok' },
+  ],
 };
 
 const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
@@ -142,23 +203,62 @@ function addLine(text, cls) {
   span.className = 'line ' + (cls || '');
   span.textContent = text;
   output.appendChild(span);
+  output.scrollTop = output.scrollHeight;
 }
 
 function addLines(lines) {
-  lines.forEach(l => addLine(l.text, l.cls || ''));
+  lines.forEach(function(l) { addLine(l.text, l.cls || ''); });
+  addLine('');
+}
+
+async function askAI(query) {
+  addLine('> thinking...', 'dim');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: query }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content && data.content[0] && data.content[0].text;
+
+    if (text) {
+      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
+        addLine('> ' + l, 'ai');
+      });
+    } else {
+      addLine('> no response.', 'err');
+    }
+  } catch (e) {
+    addLine('> connection failed.', 'err');
+  }
+
   addLine('');
 }
 
 input.addEventListener('keydown', function(e) {
   if (e.key !== 'Enter') return;
-  const val = input.value.trim().toLowerCase();
+  const val = input.value.trim();
+  const valLower = val.toLowerCase();
   if (!val) return;
 
   addLine('alex@coman ~ % ' + val, 'dim');
   input.value = '';
   hint.textContent = '';
 
-  if (redirectCommands.indexOf(val) !== -1) {
+  if (redirectCommands.indexOf(valLower) !== -1) {
     addLines([
       { text: 'unlocking /desktop...', cls: 'dim' },
       { text: 'redirecting.', cls: 'ok' },
@@ -169,11 +269,22 @@ input.addEventListener('keydown', function(e) {
     return;
   }
 
-  const resp = responses[val];
+  if (valLower.indexOf('ai ') === 0) {
+    const query = val.slice(3).trim();
+    if (query) {
+      askAI(query);
+    } else {
+      addLine('usage: ai [your question]', 'err');
+      addLine('');
+    }
+    return;
+  }
+
+  const resp = responses[valLower];
   if (resp) {
     addLines(resp);
   } else {
-    addLine('command not found: ' + val, 'err');
+    addLine('command not found: ' + valLower, 'err');
     addLine('try: help', 'dim');
     addLine('');
   }
@@ -183,6 +294,8 @@ input.addEventListener('input', function() {
   const v = input.value.toLowerCase();
   if (v.indexOf('open') === 0 || v.indexOf('cd') === 0 || v === 'desktop') {
     hint.textContent = '→ this will take you somewhere';
+  } else if (v.indexOf('ai ') === 0) {
+    hint.textContent = '→ ask anything';
   } else {
     hint.textContent = '';
   }
