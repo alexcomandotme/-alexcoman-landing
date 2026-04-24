@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>alexcoman.me</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2rem;
+  }
+
+  .term-header {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .term-output {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    line-height: 2;
+    min-height: 80px;
+  }
+
+  .term-output .line { display: block; }
+  .term-output .dim { color: rgba(255,255,255,0.3); }
+  .term-output .bright { color: #fff; }
+  .term-output .ok { color: #1D9E75; }
+  .term-output .err { color: #E24B4A; }
+
+  .term-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1.5rem;
+    border-top: 0.5px solid rgba(255,255,255,0.12);
+    padding-top: 1.5rem;
+  }
+
+  .term-prompt {
+    font-size: 13px;
+    color: rgba(255,255,255,0.3);
+    white-space: nowrap;
+  }
+
+  #term-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #fff;
+    flex: 1;
+    caret-color: #fff;
+  }
+
+  #term-input::placeholder {
+    color: rgba(255,255,255,0.2);
+  }
+
+  .hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 1rem;
+    letter-spacing: 0.04em;
+    min-height: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="term-header">alexcoman.me — shell v1.0</div>
+
+<div class="term-output" id="output">
+  <span class="line dim">last login: today</span>
+  <span class="line">&nbsp;</span>
+  <span class="line">you're at the surface.</span>
+  <span class="line dim">there's more underneath.</span>
+  <span class="line">&nbsp;</span>
+</div>
+
+<div class="term-input-row">
+  <span class="term-prompt">alex@coman ~ %</span>
+  <input id="term-input" autocomplete="off" autocorrect="off" spellcheck="false" autofocus placeholder="type a command..." />
+</div>
+
+<div class="hint" id="hint">try: help</div>
+
+<script>
+const input = document.getElementById('term-input');
+const output = document.getElementById('output');
+const hint = document.getElementById('hint');
+
+const responses = {
+  help: [
+    { text: 'available commands:', cls: 'dim' },
+    { text: '  ls          list what\'s here', cls: '' },
+    { text: '  whoami      obvious', cls: '' },
+    { text: '  open        open something', cls: '' },
+    { text: '  cd ..       go deeper', cls: '' },
+  ],
+  ls: [
+    { text: 'drwxr-xr-x  surface/', cls: 'dim' },
+    { text: 'drwx------  desktop/   [restricted]', cls: 'bright' },
+    { text: '-rw-r--r--  readme.txt', cls: 'dim' },
+  ],
+  whoami: [
+    { text: 'alex coman', cls: 'bright' },
+    { text: 'post-producer. editor. human.', cls: '' },
+    { text: 'the rest is in /desktop', cls: 'dim' },
+  ],
+  'cat readme.txt': [
+    { text: 'this is the surface.', cls: '' },
+    { text: 'the work lives somewhere else.', cls: '' },
+    { text: 'you\'ll need to go deeper.', cls: 'dim' },
+  ],
+  open: [
+    { text: 'open what?', cls: 'err' },
+    { text: 'try: open desktop', cls: 'dim' },
+  ],
+  'ls desktop': [
+    { text: 'ls: desktop/: permission denied', cls: 'err' },
+    { text: 'hint: you need to open it first.', cls: 'dim' },
+  ],
+};
+
+const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
+
+function addLine(text, cls) {
+  const span = document.createElement('span');
+  span.className = 'line ' + (cls || '');
+  span.textContent = text;
+  output.appendChild(span);
+}
+
+function addLines(lines) {
+  lines.forEach(l => addLine(l.text, l.cls || ''));
+  addLine('');
+}
+
+input.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  const val = input.value.trim().toLowerCase();
+  if (!val) return;
+
+  addLine('alex@coman ~ % ' + val, 'dim');
+  input.value = '';
+  hint.textContent = '';
+
+  if (redirectCommands.indexOf(val) !== -1) {
+    addLines([
+      { text: 'unlocking /desktop...', cls: 'dim' },
+      { text: 'redirecting.', cls: 'ok' },
+    ]);
+    setTimeout(function() {
+      window.top.location.href = 'https://alexcoman.me/desktop';
+    }, 800);
+    return;
+  }
+
+  const resp = responses[val];
+  if (resp) {
+    addLines(resp);
+  } else {
+    addLine('command not found: ' + val, 'err');
+    addLine('try: help', 'dim');
+    addLine('');
+  }
+});
+
+input.addEventListener('input', function() {
+  const v = input.value.toLowerCase();
+  if (v.indexOf('open') === 0 || v.indexOf('cd') === 0 || v === 'desktop') {
+    hint.textContent = '→ this will take you somewhere';
+  } else {
+    hint.textContent = '';
+  }
+});
+</script>
+</body>
+</html>
