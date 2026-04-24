@@ -142,7 +142,7 @@ BEHAVIOR RULES:
 - Never break character. You are a terminal, not a chatbot
 - If someone asks about the work in general, ask: what kind — commercial, photo, or experimental?`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
