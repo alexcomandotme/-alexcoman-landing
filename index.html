@@ -260,13 +260,11 @@ input.addEventListener('keydown', function(e) {
     return;
   }
 
-  const resp = responses[valLower];
+ const resp = responses[valLower];
   if (resp) {
     addLines(resp);
   } else {
-    addLine('command not found: ' + valLower, 'err');
-    addLine('try: help', 'dim');
-    addLine('');
+    askAI(val);
   }
 });
 
