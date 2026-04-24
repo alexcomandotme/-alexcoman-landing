@@ -14,6 +14,9 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   const { query } = body;
 
+  console.log('query received:', query);
+  console.log('api key exists:', !!process.env.GEMINI_API_KEY);
+
   const SYSTEM_PROMPT = `You are a terse terminal assistant living on Alex Coman's portfolio site (alexcoman.me).
 You help visitors understand who Alex is and guide them to the right place based on what they're looking for.
 
