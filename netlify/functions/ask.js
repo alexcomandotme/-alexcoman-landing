@@ -59,6 +59,7 @@ BEHAVIOR RULES:
   });
 
   const data = await response.json();
+  console.log('Gemini response:', JSON.stringify(data));
   const text = data.candidates &&
     data.candidates[0] &&
     data.candidates[0].content &&
