@@ -108,18 +108,25 @@ const responses = {
     { text: '  whoami ', cls: '' },
     { text: '  uptime ', cls: '' },
   ],
-  funfacts: [
-    { text: 'LLMs don\'t actually think. they autocomplete at scale.', cls: '' },
-    { text: 'the AI answering you has no idea what day it is.', cls: 'dim' },
-    { text: 'it also has no idea it\'s on a portfolio site.', cls: 'dim' },
-    { text: 'it was trained on the internet. make of that what you will.', cls: '' },
-  ],
   'cat readme.txt': [
     { text: 'this is the surface.', cls: '' },
     { text: 'the work lives somewhere else.', cls: '' },
     { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' },
   ],
 };
+
+const funfactsList = [
+  'LLMs don\'t actually think. they autocomplete at scale.',
+  'the AI answering you has no idea what day it is.',
+  'it also has no idea it\'s on a portfolio site.',
+  'it was trained on the internet. make of that what you will.',
+  'every response is a statistical guess. a very confident one.',
+  'the model has read more books than any human. understood fewer.',
+  'hallucination is just autocomplete with confidence.',
+  'there is no "it". there is only the next token.',
+  'it doesn\'t remember you. it never did.',
+  'context window: the only form of memory it has.',
+];
 
 const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
 
@@ -225,6 +232,14 @@ input.addEventListener('keydown', function(e) {
       span.textContent = getUptime();
     }, 1000);
     setTimeout(function() { clearInterval(interval); }, 60000);
+    return;
+  }
+
+  if (valLower === 'funfacts') {
+    const shuffled = funfactsList.slice().sort(function() { return 0.5 - Math.random(); });
+    addLine(shuffled[0], '');
+    addLine(shuffled[1], 'dim');
+    addLine('');
     return;
   }
 
