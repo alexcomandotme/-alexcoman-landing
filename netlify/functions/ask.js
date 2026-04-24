@@ -1,6 +1,16 @@
 exports.handler = async function(event) {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
   }
 
   const { query } = JSON.parse(event.body);
@@ -59,7 +69,6 @@ BEHAVIOR RULES:
   });
 
   const data = await response.json();
-  console.log('Gemini response:', JSON.stringify(data));
   const text = data.candidates &&
     data.candidates[0] &&
     data.candidates[0].content &&
@@ -69,7 +78,7 @@ BEHAVIOR RULES:
 
   return {
     statusCode: 200,
-    headers: { 'Access-Control-Allow-Origin': '*' },
+    headers,
     body: JSON.stringify({ text: text || null })
   };
 };
