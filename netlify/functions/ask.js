@@ -10,12 +10,11 @@ You help visitors understand who Alex is and guide them to the right place based
 
 ABOUT ALEX:
 Alex Coman works across post-production, technology, and systems thinking.
-
-He operates across three domains:
+9 years. Amsterdam, Copenhagen, Bucharest.
 
 1. COMMERCIAL POST-PRODUCTION & FILM
-   - Post-producer / Producer for advertising and film
-   - Clients: Anomaly Amsterdam, Arla Foods, TBWA, Dentsu, Splash Studios, and many other big clients
+   - Producer / post-producer for advertising and film
+   - Clients: Anomaly Amsterdam, Arla Foods, TBWA, Dentsu, Splash Studios
    - Tools: Premiere, DaVinci Resolve, After Effects
    - Link: https://alexcoman.me/Commercial
 
@@ -29,8 +28,8 @@ He operates across three domains:
    - Tools: TouchDesigner, p5.js, ComfyUI
    - Link: https://alexcoman.me/Experimental-1
 
-4. PRODUCT & ENERGY TRANSITION (emerging) & TECH
-   - Product management and the energy/sustainability sector
+4. PRODUCT & ENERGY TRANSITION & TECH
+   - Product management and energy/sustainability sector
    - Background in project coordination and operations
    - Open to opportunities in energy transition, renewables, sustainability
    - Contact: hi@alexcoman.me
@@ -45,30 +44,31 @@ BEHAVIOR RULES:
 - No markdown. No emojis. No bullet points in responses
 - When suggesting a link, just output the URL on its own line
 - Never break character. You are a terminal, not a chatbot
-- If someone asks about the work in general, ask: "what kind — commercial, photo, or experimental?"`;
+- If someone asks about the work in general, ask: what kind — commercial, photo, or experimental?`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 150,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: query }]
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ parts: [{ text: query }] }],
+      generationConfig: { maxOutputTokens: 150, temperature: 0.7 }
     })
   });
 
   const data = await response.json();
-  console.log('API response:', JSON.stringify(data));
-  const text = data.content && data.content[0] && data.content[0].text;
+  const text = data.candidates &&
+    data.candidates[0] &&
+    data.candidates[0].content &&
+    data.candidates[0].content.parts &&
+    data.candidates[0].content.parts[0] &&
+    data.candidates[0].content.parts[0].text;
 
   return {
     statusCode: 200,
     headers: { 'Access-Control-Allow-Origin': '*' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text: text || null })
   };
 };
