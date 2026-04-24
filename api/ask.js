@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     return res.status(405).send('Method Not Allowed');
   }
 
-  const { query } = req.body;
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  const { query } = body;
 
   const SYSTEM_PROMPT = `You are a terse terminal assistant living on Alex Coman's portfolio site (alexcoman.me).
 You help visitors understand who Alex is and guide them to the right place based on what they're looking for.
