@@ -79,7 +79,7 @@
 </head>
 <body>
 
-<div class="term-header">alexcoman.me — shell v1.0</div>
+<div class="term-header">alexcoman.me</div>
 
 <div class="term-output" id="output">
   <span class="line dim">last login: today</span>
@@ -97,7 +97,6 @@
 <div class="hint" id="hint">try: help</div>
 
 <script>
- 
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 const hint = document.getElementById('hint');
@@ -105,88 +104,36 @@ const hint = document.getElementById('hint');
 const responses = {
   help: [
     { text: 'available commands:', cls: 'dim' },
-    { text: '  ls          list what\'s here', cls: '' },
+    { text: '  funfacts    random lore', cls: '' },
     { text: '  whoami      obvious', cls: '' },
-    { text: '  open        open something', cls: '' },
-    { text: '  ai [query]  ask something', cls: '' },
-    { text: '  sudo        don\'t', cls: '' },
-    { text: '  uptime      system stats', cls: '' },
-    { text: '  git log     history', cls: '' },
+    { text: '  uptime      how long', cls: '' },
   ],
-  ls: [
-    { text: 'drwxr-xr-x  surface/', cls: 'dim' },
-    { text: 'drwx------  desktop/   [restricted]', cls: 'bright' },
-    { text: '-rw-r--r--  readme.txt', cls: 'dim' },
-  ],
-  whoami: [
-    { text: 'alex coman', cls: 'bright' },
-    { text: 'post-producer. editor. human.', cls: '' },
-    { text: 'the rest is in /desktop', cls: 'dim' },
+  funfacts: [
+    { text: 'LLMs don\'t actually think. they autocomplete at scale.', cls: '' },
+    { text: 'the AI answering you has no idea what day it is.', cls: 'dim' },
+    { text: 'it also has no idea it\'s on a portfolio site.', cls: 'dim' },
+    { text: 'it was trained on the internet. make of that what you will.', cls: '' },
   ],
   'cat readme.txt': [
     { text: 'this is the surface.', cls: '' },
     { text: 'the work lives somewhere else.', cls: '' },
-    { text: 'you\'ll need to go deeper.', cls: 'dim' },
-  ],
-  open: [
-    { text: 'open what?', cls: 'err' },
-    { text: 'try: open desktop', cls: 'dim' },
-  ],
-  'ls desktop': [
-    { text: 'ls: desktop/: permission denied', cls: 'err' },
-    { text: 'hint: you need to open it first.', cls: 'dim' },
-  ],
-  sudo: [
-    { text: 'alex is not in the sudoers file.', cls: 'err' },
-    { text: 'this incident will be reported.', cls: 'dim' },
-  ],
-  uptime: [
-    { text: '9 years, 3 cities, 1 kid', cls: 'bright' },
-    { text: 'load average: high', cls: 'dim' },
-  ],
-  'git log': [
-    { text: 'commit a1f3c9e  —  add everything that matters', cls: 'bright' },
-    { text: 'commit 88bd201  —  move to amsterdam', cls: '' },
-    { text: 'commit 3c72a10  —  start making films', cls: '' },
-    { text: 'commit 0000001  —  init', cls: 'dim' },
-  ],
-  'man alex': [
-    { text: 'NAME', cls: 'bright' },
-    { text: '     alex coman — post-producer, editor', cls: '' },
-    { text: 'SYNOPSIS', cls: 'bright' },
-    { text: '     alex [film] [commercial] [generative_art]', cls: '' },
-    { text: 'DESCRIPTION', cls: 'bright' },
-    { text: '     9 years. amsterdam, copenhagen, bucharest.', cls: '' },
-    { text: '     makes things move. sometimes on purpose.', cls: '' },
-    { text: 'SEE ALSO', cls: 'bright' },
-    { text: '     open desktop', cls: 'ok' },
-  ],
-  'rm -rf /': [
-    { text: 'nice try.', cls: 'err' },
-  ],
-  'ls music': [
-    { text: 'guitar/', cls: '' },
-    { text: 'piano/', cls: '' },
-    { text: 'synth/', cls: '' },
-    { text: 'unfinished_tracks/   [755 items]', cls: 'dim' },
-  ],
-  'ls photos': [
-    { text: 'drwx------  film/', cls: '' },
-    { text: 'drwx------  medium_format/', cls: '' },
-    { text: 'drwx------  analog/', cls: '' },
-  ],
-  'ping ioana': [
-    { text: 'PING ioana: Request timeout', cls: 'err' },
-  ],
-  vim: [
-    { text: 'type :q! to exit', cls: 'dim' },
-  ],
-  ':q!': [
-    { text: 'nice. you know vim.', cls: 'ok' },
+    { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' },
   ],
 };
 
 const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
+
+function getUptime() {
+  const born = new Date('1990-08-19T09:30:00Z');
+  const now = new Date();
+  const diff = now - born;
+  const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+  const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+  return years + 'y ' + days + 'd ' + hours + 'h ' + mins + 'm ' + secs + 's';
+}
 
 function addLine(text, cls) {
   const span = document.createElement('span');
@@ -215,7 +162,7 @@ async function askAI(query) {
     const text = data.text;
 
     if (text) {
-     text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
+      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
         if (l.match(/^https?:\/\//)) {
           const a = document.createElement('a');
           a.href = l.trim();
@@ -259,18 +206,29 @@ input.addEventListener('keydown', function(e) {
     return;
   }
 
-  if (valLower.indexOf('ai ') === 0) {
-    const query = val.slice(3).trim();
-    if (query) {
-      askAI(query);
-    } else {
-      addLine('usage: ai [your question]', 'err');
-      addLine('');
-    }
+  if (valLower === 'whoami') {
+    addLine('redirecting to /desktop...', 'dim');
+    setTimeout(function() {
+      window.top.location.href = 'https://alexcoman.me/desktop';
+    }, 600);
     return;
   }
 
- const resp = responses[valLower];
+  if (valLower === 'uptime') {
+    const span = document.createElement('span');
+    span.className = 'line bright';
+    span.textContent = getUptime();
+    output.appendChild(span);
+    addLine('load average: variable', 'dim');
+    addLine('');
+    const interval = setInterval(function() {
+      span.textContent = getUptime();
+    }, 1000);
+    setTimeout(function() { clearInterval(interval); }, 60000);
+    return;
+  }
+
+  const resp = responses[valLower];
   if (resp) {
     addLines(resp);
   } else {
@@ -282,8 +240,6 @@ input.addEventListener('input', function() {
   const v = input.value.toLowerCase();
   if (v.indexOf('open') === 0 || v.indexOf('cd') === 0 || v === 'desktop') {
     hint.textContent = '→ this will take you somewhere';
-  } else if (v.indexOf('ai ') === 0) {
-    hint.textContent = '→ ask anything';
   } else {
     hint.textContent = '';
   }
