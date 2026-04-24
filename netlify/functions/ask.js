@@ -63,6 +63,7 @@ BEHAVIOR RULES:
   });
 
   const data = await response.json();
+  console.log('API response:', JSON.stringify(data));
   const text = data.content && data.content[0] && data.content[0].text;
 
   return {
