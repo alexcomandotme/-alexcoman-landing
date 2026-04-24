@@ -215,8 +215,18 @@ async function askAI(query) {
     const text = data.text;
 
     if (text) {
-      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
-        addLine('> ' + l, 'ai');
+     text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
+        if (l.match(/^https?:\/\//)) {
+          const a = document.createElement('a');
+          a.href = l.trim();
+          a.textContent = '> ' + l.trim();
+          a.style.color = '#5DCAA5';
+          a.style.display = 'block';
+          a.target = '_top';
+          output.appendChild(a);
+        } else {
+          addLine('> ' + l, 'ai');
+        }
       });
     } else {
       addLine('> no response.', 'err');
