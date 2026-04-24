@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>alexcoman.me</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -31,7 +31,7 @@
     color: rgba(255,255,255,0.6);
     line-height: 2;
     min-height: 80px;
-    font-weight: 500;
+    font-weight: 700;
   }
 
   .term-output .line { display: block; }
@@ -105,7 +105,8 @@ const hint = document.getElementById('hint');
 const responses = {
   help: [
     { text: 'available commands:', cls: 'dim' },
-    { text: '  funfacts ', cls: '' },
+    { text: '  sayhello ', cls: '' },
+    { text: '  funfact ', cls: '' },
     { text: '  whoami ', cls: '' },
     { text: '  uptime ', cls: '' },
   ],
@@ -116,17 +117,9 @@ const responses = {
   ],
 };
 
-const funfactsList = [
+const funfactList = [
   'LLMs don\'t actually think. they autocomplete at scale.',
-  'the AI answering you has no idea what day it is.',
-  'it also has no idea it\'s on a portfolio site.',
-  'it was trained on the internet. make of that what you will.',
-  'every response is a statistical guess. a very confident one.',
-  'the model has read more books than any human. understood fewer.',
-  'hallucination is just autocomplete with confidence.',
-  'there is no "it". there is only the next token.',
-  'it doesn\'t remember you. it never did.',
-  'context window: the only form of memory it has.',
+  'AI's every response is a statistical guess.
 ];
 
 const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
@@ -236,8 +229,8 @@ input.addEventListener('keydown', function(e) {
     return;
   }
 
-  if (valLower === 'funfacts') {
-    const shuffled = funfactsList.slice().sort(function() { return 0.5 - Math.random(); });
+  if (valLower === 'funfact') {
+    const shuffled = funfactList.slice().sort(function() { return 0.5 - Math.random(); });
     addLine(shuffled[0], '');
     addLine('');
     return;
