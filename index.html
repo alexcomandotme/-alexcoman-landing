@@ -31,6 +31,7 @@
     color: rgba(255,255,255,0.6);
     line-height: 2;
     min-height: 80px;
+    font-weight: 500;
   }
 
   .term-output .line { display: block; }
@@ -238,7 +239,6 @@ input.addEventListener('keydown', function(e) {
   if (valLower === 'funfacts') {
     const shuffled = funfactsList.slice().sort(function() { return 0.5 - Math.random(); });
     addLine(shuffled[0], '');
-    addLine(shuffled[1], 'dim');
     addLine('');
     return;
   }
