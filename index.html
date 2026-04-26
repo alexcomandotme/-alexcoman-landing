@@ -185,21 +185,39 @@ function copyToClipboard(text) {
 
 function addEmailBlock() {
   // email line — click to copy
-  const emailLine = document.createElement('span');
+  const emailLine = document.createElement('div');
   emailLine.className = 'line';
   emailLine.style.color = '#5DCAA5';
   emailLine.style.cursor = 'pointer';
-  emailLine.textContent = '> ' + config.email + '  [click to copy]';
-  emailLine.addEventListener('click', () => {
+  emailLine.style.userSelect = 'text';
+
+  // split email to defeat browser auto-linkify
+  const [user, domain] = config.email.split('@');
+  const prefix = document.createElement('span');
+  prefix.textContent = '> ';
+  const userSpan = document.createElement('span');
+  userSpan.textContent = user;
+  const at = document.createElement('span');
+  at.textContent = '@';
+  const domainSpan = document.createElement('span');
+  domainSpan.textContent = domain;
+  const status = document.createElement('span');
+  status.textContent = '  [click to copy]';
+  status.style.color = 'rgba(255,255,255,0.4)';
+
+  emailLine.append(prefix, userSpan, at, domainSpan, status);
+
+  emailLine.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     copyToClipboard(config.email).then(() => {
-      emailLine.textContent = '> ' + config.email + '  [copied]';
-      setTimeout(() => {
-        emailLine.textContent = '> ' + config.email + '  [click to copy]';
-      }, 1500);
+      status.textContent = '  [copied]';
+      setTimeout(() => { status.textContent = '  [click to copy]'; }, 1500);
     }).catch(() => {
-      emailLine.textContent = '> ' + config.email + '  [copy failed — select manually]';
+      status.textContent = '  [select & copy manually]';
     });
   });
+
   output.appendChild(emailLine);
 
   // gmail shortcut
