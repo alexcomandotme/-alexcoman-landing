@@ -15,13 +15,11 @@ export default async function handler(req, res) {
   const { query } = body;
 
   console.log('query received:', query);
-  console.log('api key exists:', !!process.env.GEMINI_API_KEY);
+  console.log('api key exists:', !!process.env.GROQ_API_KEY);
 
   const SYSTEM_PROMPT = `You are a terminal assistant on Alex Coman's portfolio site. You are not Alex.
 Always respond in English regardless of what language the visitor uses.
 Never describe Alex's experience, years, or background unless explicitly asked for specific details.
-
-First message from any visitor: respond with "alex coman's terminal. ask me anything."
 
 If the visitor seems to be from a business, hiring, product, or energy context:
 - Give only: https://linkedin.com/in/alexcoman and hi@alexcoman.me
@@ -34,28 +32,32 @@ If the visitor seems creative, agency, or production-oriented:
 
 If unclear: ask one short question. Never repeat it.
 Tone: dry, minimal, slightly cryptic. Max 2-3 lines. No markdown. No emojis. No bullet points.
-Never say you are Alex. Never introduce yourself as anything other than a terminal.`;
+Never say you are Alex. You are a terminal, not a chatbot.
+When suggesting a link, output the URL on its own line. Do not add any text after the URL.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-  const response = await fetch(url, {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+    },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ parts: [{ text: query }] }],
-      generationConfig: { maxOutputTokens: 150, temperature: 0.7 }
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 150,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: query }
+      ]
     })
   });
 
   const data = await response.json();
-  console.log('gemini data:', JSON.stringify(data).slice(0, 500));
-  const text = data.candidates &&
-    data.candidates[0] &&
-    data.candidates[0].content &&
-    data.candidates[0].content.parts &&
-    data.candidates[0].content.parts[0] &&
-    data.candidates[0].content.parts[0].text;
+  console.log('groq response:', JSON.stringify(data).slice(0, 500));
+
+  const text = data.choices &&
+    data.choices[0] &&
+    data.choices[0].message &&
+    data.choices[0].message.content;
 
   return res.status(200).json({ text: text || null });
 }
