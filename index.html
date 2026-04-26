@@ -157,26 +157,36 @@ function addLines(lines) {
   addLine('');
 }
 
-function addEmailLink(label) {
-  const a = document.createElement('a');
-  a.href = 'mailto:' + config.email;
-  a.textContent = '> ' + (label || config.email);
-  a.style.color = '#5DCAA5';
-  a.style.display = 'block';
-  a.className = 'line';
-  a.target = '_top';
-  output.appendChild(a);
-  output.scrollTop = output.scrollHeight;
-  return a;
-}
+function addEmailBlock() {
+  // email line — click to copy
+  const emailLine = document.createElement('span');
+  emailLine.className = 'line';
+  emailLine.style.color = '#5DCAA5';
+  emailLine.style.cursor = 'pointer';
+  emailLine.textContent = '> ' + config.email + '  [click to copy]';
+  emailLine.addEventListener('click', () => {
+    navigator.clipboard.writeText(config.email).then(() => {
+      emailLine.textContent = '> ' + config.email + '  [copied]';
+      setTimeout(() => {
+        emailLine.textContent = '> ' + config.email + '  [click to copy]';
+      }, 1500);
+    }).catch(() => {
+      emailLine.textContent = '> ' + config.email + '  [copy failed]';
+    });
+  });
+  output.appendChild(emailLine);
 
-function openMailto() {
-  const a = document.createElement('a');
-  a.href = 'mailto:' + config.email;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // gmail shortcut
+  const gmailLink = document.createElement('a');
+  gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(config.email);
+  gmailLink.target = '_blank';
+  gmailLink.rel = 'noopener noreferrer';
+  gmailLink.textContent = '> open in gmail';
+  gmailLink.className = 'line';
+  gmailLink.style.color = 'rgba(255,255,255,0.4)';
+  output.appendChild(gmailLink);
+
+  output.scrollTop = output.scrollHeight;
 }
 
 function clearUptime() {
@@ -262,9 +272,8 @@ const commands = {
 
   sayhello: () => {
     addLine('reach out:', 'dim');
-    addEmailLink(config.email);
+    addEmailBlock();
     addLine('');
-    setTimeout(openMailto, 200);
   }
 };
 
@@ -276,9 +285,8 @@ function isContactIntent(query) {
 
 function handleContact() {
   addLine('> reach out:', 'ai');
-  addEmailLink(config.email);
+  addEmailBlock();
   addLine('');
-  setTimeout(openMailto, 200);
 }
 
 // ---------- ai fallback (logic untouched) ----------
