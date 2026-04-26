@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  const { query } = body;
+  const { query, history = [] } = body;
 
   console.log('query received:', query);
   console.log('api key exists:', !!process.env.GROQ_API_KEY);
@@ -47,6 +47,7 @@ RULES:
       max_tokens: 150,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
+        ...history,
         { role: 'user', content: query }
       ]
     })
