@@ -42,7 +42,7 @@ When suggesting a link, output the URL on its own line. Do not add any text afte
       'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
     },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      model: 'model: 'llama-3.3-70b-versatile',',
       max_tokens: 150,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
