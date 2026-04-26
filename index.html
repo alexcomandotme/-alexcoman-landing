@@ -84,12 +84,13 @@
 
   .hint {
     font-size: 11px;
-    color: #E89846;
+    color: rgba(255,255,255,0.25);
     margin-top: 1rem;
     letter-spacing: 0.04em;
     min-height: 16px;
     font-weight: 700;
   }
+  .hint .accent { color: #E89846; }
 
   @media (max-width: 640px) {
     body { padding: 1.5rem 1.25rem; }
@@ -114,7 +115,7 @@
   <input id="term-input" autocomplete="off" autocorrect="off" spellcheck="false" autofocus placeholder="type a command..." />
 </div>
 
-<div class="hint" id="hint">try: help</div>
+<div class="hint" id="hint">try: <span class="accent">help</span></div>
 
 <script>
 // ---------- config ----------
@@ -272,11 +273,11 @@ const commands = {
   help: () => addLines([
     { text: 'available commands:', cls: 'dim' },
     { text: '  sayhello' },
-    { text: '  funfact' },
     { text: '  whoami' },
+    { text: '  readme' },
     { text: '  uptime' },
-    { text: '  clear' },
-    { text: '  readme' }
+    { text: '  funfact' },
+    { text: '  clear' }
   ]),
 
   readme: () => addLines([
@@ -433,7 +434,7 @@ input.addEventListener('keydown', e => {
 
   addLine('alex@coman ~ % ' + val, 'dim');
   input.value = '';
-  hint.textContent = '';
+  hint.innerHTML = '';
 
   if (valLower !== 'uptime') clearUptime();
 
@@ -460,9 +461,9 @@ input.addEventListener('keydown', e => {
 input.addEventListener('input', () => {
   const v = input.value.toLowerCase();
   if (v.indexOf('open') === 0 || v.indexOf('cd') === 0 || v === 'desktop') {
-    hint.textContent = '→ this will take you somewhere';
+    hint.innerHTML = '→ this will take you somewhere';
   } else {
-    hint.textContent = '';
+    hint.innerHTML = '';
   }
 });
 </script>
