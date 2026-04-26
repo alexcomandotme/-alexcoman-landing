@@ -101,6 +101,7 @@
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 const hint = document.getElementById('hint');
+const history = [];
 
 const responses = {
   help: [
@@ -119,7 +120,7 @@ const responses = {
 
 const funfactList = [
   'LLMs don\'t actually think. they autocomplete at scale.',
-  'AI\'s every response is a statistical guess.'
+  'AI\'s every response is a statistical guess.',
 ];
 
 const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
@@ -151,18 +152,22 @@ function addLines(lines) {
 
 async function askAI(query) {
   addLine('> thinking...', 'dim');
+  history.push({ role: 'user', content: query });
 
   try {
     const response = await fetch('https://alexcoman-landing.vercel.app/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: query })
+      body: JSON.stringify({ query: query, history: history.slice(-6) })
     });
 
     const data = await response.json();
     const text = data.text;
 
     if (text) {
+      history.push({ role: 'assistant', content: text });
+      if (history.length > 6) history.splice(0, 2);
+
       text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
         if (l.match(/^https?:\/\//)) {
           const a = document.createElement('a');
