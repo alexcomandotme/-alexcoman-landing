@@ -48,8 +48,6 @@
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
-  .term-output .help-header { color: #E89846; }
-  .term-output .help-cmd { color: #E89846; }
 
   .term-input-row {
     display: flex;
@@ -272,13 +270,13 @@ function showThinkingDots() {
 // ---------- commands ----------
 const commands = {
   help: () => addLines([
-    { text: 'available commands:', cls: 'help-header' },
-    { text: '  sayhello', cls: 'help-cmd' },
-    { text: '  funfact', cls: 'help-cmd' },
-    { text: '  whoami', cls: 'help-cmd' },
-    { text: '  uptime', cls: 'help-cmd' },
-    { text: '  clear', cls: 'help-cmd' },
-    { text: '  readme', cls: 'help-cmd' }
+    { text: 'available commands:', cls: 'dim' },
+    { text: '  sayhello' },
+    { text: '  funfact' },
+    { text: '  whoami' },
+    { text: '  uptime' },
+    { text: '  clear' },
+    { text: '  readme' }
   ]),
 
   readme: () => addLines([
