@@ -16,6 +16,11 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    transition: opacity 0.8s ease;
+  }
+
+  body.fade-out {
+    opacity: 0;
   }
 
   .term-header {
@@ -32,6 +37,7 @@
     line-height: 2;
     min-height: 80px;
     font-weight: 700;
+    position: relative;
   }
 
   .term-output .line { display: block; }
@@ -40,6 +46,24 @@
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
+
+  /* Scanline */
+  .scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255,255,255,0.03);
+    animation: scanline 8s linear infinite;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  @keyframes scanline {
+    0% { top: 0; }
+    100% { top: 100vh; }
+  }
 
   .term-input-row {
     display: flex;
@@ -76,9 +100,16 @@
     letter-spacing: 0.04em;
     min-height: 16px;
   }
+
+  .thinking-dots {
+    color: rgba(255,255,255,0.3);
+    display: block;
+  }
 </style>
 </head>
 <body>
+
+<div class="scanline"></div>
 
 <div class="term-header">alexcoman.me</div>
 
@@ -143,6 +174,7 @@ function addLine(text, cls) {
   span.textContent = text;
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
+  return span;
 }
 
 function addLines(lines) {
@@ -150,8 +182,45 @@ function addLines(lines) {
   addLine('');
 }
 
+function typeText(element, text, speed, callback) {
+  var i = 0;
+  element.textContent = '';
+  var interval = setInterval(function() {
+    element.textContent += text[i];
+    i++;
+    output.scrollTop = output.scrollHeight;
+    if (i >= text.length) {
+      clearInterval(interval);
+      if (callback) callback();
+    }
+  }, speed);
+}
+
+function showThinkingDots() {
+  var span = document.createElement('span');
+  span.className = 'line thinking-dots';
+  span.textContent = '>';
+  output.appendChild(span);
+  output.scrollTop = output.scrollHeight;
+
+  var dots = 0;
+  var interval = setInterval(function() {
+    dots = (dots + 1) % 4;
+    span.textContent = '>' + '.'.repeat(dots);
+  }, 300);
+
+  return { element: span, stop: function() { clearInterval(interval); } };
+}
+
+function fadeAndRedirect(url) {
+  document.body.classList.add('fade-out');
+  setTimeout(function() {
+    window.top.location.href = url;
+  }, 900);
+}
+
 async function askAI(query) {
-  addLine('> thinking...', 'dim');
+  var thinking = showThinkingDots();
   history.push({ role: 'user', content: query });
 
   try {
@@ -164,31 +233,57 @@ async function askAI(query) {
     const data = await response.json();
     const text = data.text;
 
+    thinking.stop();
+    thinking.element.remove();
+
     if (text) {
       history.push({ role: 'assistant', content: text });
       if (history.length > 6) history.splice(0, 2);
 
-      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
+      var lines = text.split('\n').filter(function(l) { return l.trim(); });
+      var i = 0;
+
+      function nextLine() {
+        if (i >= lines.length) {
+          addLine('');
+          return;
+        }
+        var l = lines[i];
+        i++;
+
         if (l.match(/^https?:\/\//)) {
-          const a = document.createElement('a');
+          var a = document.createElement('a');
           a.href = l.trim();
-          a.textContent = '> ' + l.trim();
+          a.textContent = '> ';
           a.style.color = '#5DCAA5';
           a.style.display = 'block';
-          a.target = '_top';
+          a.className = 'line';
           output.appendChild(a);
+          typeText(a, '> ' + l.trim(), 18, function() {
+            setTimeout(function() {
+              fadeAndRedirect(l.trim());
+            }, 1200);
+            nextLine();
+          });
         } else {
-          addLine('> ' + l, 'ai');
+          var span = document.createElement('span');
+          span.className = 'line ai';
+          output.appendChild(span);
+          typeText(span, '> ' + l, 18, nextLine);
         }
-      });
+      }
+
+      nextLine();
     } else {
       addLine('> no response.', 'err');
+      addLine('');
     }
   } catch (e) {
+    thinking.stop();
+    thinking.element.remove();
     addLine('> connection failed.', 'err');
+    addLine('');
   }
-
-  addLine('');
 }
 
 input.addEventListener('keydown', function(e) {
@@ -202,12 +297,10 @@ input.addEventListener('keydown', function(e) {
   hint.textContent = '';
 
   if (redirectCommands.indexOf(valLower) !== -1) {
-    addLines([
-      { text: 'unlocking /desktop...', cls: 'dim' },
-      { text: 'redirecting.', cls: 'ok' },
-    ]);
+    addLine('unlocking /desktop...', 'dim');
+    addLine('redirecting.', 'ok');
     setTimeout(function() {
-      window.top.location.href = 'https://alexcoman.me/desktop';
+      fadeAndRedirect('https://alexcoman.me/desktop');
     }, 800);
     return;
   }
@@ -215,7 +308,7 @@ input.addEventListener('keydown', function(e) {
   if (valLower === 'whoami') {
     addLine('redirecting to /desktop...', 'dim');
     setTimeout(function() {
-      window.top.location.href = 'https://alexcoman.me/desktop';
+      fadeAndRedirect('https://alexcoman.me/desktop');
     }, 600);
     return;
   }
