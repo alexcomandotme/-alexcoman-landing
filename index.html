@@ -48,6 +48,8 @@
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
+  .term-output .help-header { color: #E89846; }
+  .term-output .help-cmd { color: #E89846; }
 
   .term-input-row {
     display: flex;
@@ -191,12 +193,12 @@ function addEmailBlock() {
   emailLine.style.cursor = 'pointer';
   emailLine.style.userSelect = 'text';
 
-  // split email to defeat browser auto-linkify
+  // split email + insert zero-width space to defeat auto-linkify (Cargo, etc)
   const [user, domain] = config.email.split('@');
   const prefix = document.createElement('span');
   prefix.textContent = '> ';
   const userSpan = document.createElement('span');
-  userSpan.textContent = user;
+  userSpan.textContent = user + '\u200B'; // ZWSP after user
   const at = document.createElement('span');
   at.textContent = '@';
   const domainSpan = document.createElement('span');
@@ -270,16 +272,16 @@ function showThinkingDots() {
 // ---------- commands ----------
 const commands = {
   help: () => addLines([
-    { text: 'available commands:', cls: 'dim' },
-    { text: '  sayhello' },
-    { text: '  funfact' },
-    { text: '  whoami' },
-    { text: '  uptime' },
-    { text: '  clear' },
-    { text: '  cat readme.txt' }
+    { text: 'available commands:', cls: 'help-header' },
+    { text: '  sayhello', cls: 'help-cmd' },
+    { text: '  funfact', cls: 'help-cmd' },
+    { text: '  whoami', cls: 'help-cmd' },
+    { text: '  uptime', cls: 'help-cmd' },
+    { text: '  clear', cls: 'help-cmd' },
+    { text: '  readme', cls: 'help-cmd' }
   ]),
 
-  'cat readme.txt': () => addLines([
+  readme: () => addLines([
     { text: 'this is the surface.' },
     { text: 'the work lives somewhere else.' },
     { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' }
@@ -315,9 +317,8 @@ const commands = {
   },
 
   sayhello: () => {
-    addLine('reach out:', 'dim');
-    addEmailBlock();
-    addLine('');
+    addLine('> hello!', 'ai');
+    askAI('hello');
   }
 };
 
