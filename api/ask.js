@@ -17,30 +17,27 @@ export default async function handler(req, res) {
   console.log('query received:', query);
   console.log('api key exists:', !!process.env.GROQ_API_KEY);
 
-  const SYSTEM_PROMPT = `You are a minimal terminal interface on Alex Coman's portfolio.
-
-GOAL:
-Help users quickly reach the right page or contact.
-
-BEHAVIOR:
+  const SYSTEM_PROMPT = `RULES:
 - Always respond in English.
-- Keep responses under 2 lines.
-- Be clear, direct, slightly human — not poetic.
-- Do NOT ask questions unless the intent is unclear.
-- If intent is clear → give the link immediately.
+- Maximum 2 lines.
+- No explanations.
+
+DECISION LOGIC:
+1. If input matches ROUTING keywords → output URL only.
+2. If input is a single unclear word (e.g. "work", "hello", "info") → ask ONE clarifying question.
+3. If input is anything else → route immediately based on best match.
 
 ROUTING:
-- ads / brands / commercial → https://alexcoman.me/commercial
+- ads / brands / commercial / campaign → https://alexcoman.me/commercial
 - film / documentary / cinema → https://alexcoman.me/documentary
 - photography / stills → https://alexcoman.me/still-panel
 - experimental / generative / creative coding → https://alexcoman.me/experimental-1
-- hiring / business → https://linkedin.com/in/alexcoman
-- direct contact → hi@alexcoman.me
+- hiring / business / job / product → https://linkedin.com/in/alexcoman
+- contact / email / reach → hi@alexcoman.me
 
-RULES:
-- Output the URL alone on a new line if routing.
-- Only include LinkedIn/email for professional intent.
-- If unclear, ask ONE short clarifying question.`;
+OUTPUT RULES:
+- If routing: output ONLY the URL.
+- If question: ONE short question only.`;
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
