@@ -8,6 +8,8 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html, body { height: 100%; }
+
   body {
     background: transparent;
     font-family: 'JetBrains Mono', monospace;
@@ -19,9 +21,7 @@
     transition: opacity 0.8s ease;
   }
 
-  body.fade-out {
-    opacity: 0;
-  }
+  body.fade-out { opacity: 0; }
 
   .term-header {
     font-size: 15px;
@@ -35,34 +35,18 @@
     font-size: 15px;
     color: rgba(255,255,255,0.6);
     line-height: 2;
-    min-height: 80px;
-    font-weight: 700;
+    font-weight: 400;
     position: relative;
+    overflow-y: auto;
+    max-height: 60vh;
   }
 
-  .term-output .line { display: block; }
+  .term-output .line { display: block; white-space: pre-wrap; word-break: break-word; }
   .term-output .dim { color: rgba(255,255,255,0.3); }
   .term-output .bright { color: #fff; }
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
-
-  .scanline {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: rgba(255,255,255,0.03);
-    animation: scanline 8s linear infinite;
-    pointer-events: none;
-    z-index: 999;
-  }
-
-  @keyframes scanline {
-    0% { top: 0; }
-    100% { top: 100vh; }
-  }
 
   .term-input-row {
     display: flex;
@@ -84,7 +68,7 @@
     border: none;
     outline: none;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 16px;
     color: #fff;
     flex: 1;
     caret-color: #fff;
@@ -99,16 +83,21 @@
     letter-spacing: 0.04em;
     min-height: 16px;
   }
+
+  @media (max-width: 640px) {
+    body { padding: 1.5rem 1.25rem; }
+    .term-output { font-size: 14px; max-height: 55vh; }
+    .term-prompt { font-size: 13px; }
+    #term-input { font-size: 16px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="scanline"></div>
-
 <div class="term-header">alexcoman.me</div>
 
 <div class="term-output" id="output">
-  <span class="line dim">last login: today</span>
+  <span class="line dim" id="login-line"></span>
   <span class="line">&nbsp;</span>
   <span class="line">you're at the surface.</span>
   <span class="line dim">there's more underneath.</span>
@@ -123,45 +112,37 @@
 <div class="hint" id="hint">try: help</div>
 
 <script>
+// ---------- config ----------
+const config = {
+  redirectCommands: ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'],
+  desktopUrl: 'https://alexcoman.me/desktop',
+  apiUrl: 'https://alexcoman-landing.vercel.app/api/ask',
+  birthDate: '1990-08-19T09:30:00Z',
+  funfacts: [
+    "LLMs don't actually think. they autocomplete at scale.",
+    "AI's every response is a statistical guess."
+  ]
+};
+
+// ---------- dom ----------
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 const hint = document.getElementById('hint');
-const history = [];
+const loginLine = document.getElementById('login-line');
 
-const responses = {
-  help: [
-    { text: 'available commands:', cls: 'dim' },
-    { text: '  sayhello ', cls: '' },
-    { text: '  funfact ', cls: '' },
-    { text: '  whoami ', cls: '' },
-    { text: '  uptime ', cls: '' },
-  ],
-  'cat readme.txt': [
-    { text: 'this is the surface.', cls: '' },
-    { text: 'the work lives somewhere else.', cls: '' },
-    { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' },
-  ],
-};
+// last login timestamp
+loginLine.textContent = 'last login: ' + new Date().toLocaleString('en-GB', {
+  weekday: 'short', month: 'short', day: '2-digit',
+  hour: '2-digit', minute: '2-digit'
+});
 
-const funfactList = [
-  'LLMs don\'t actually think. they autocomplete at scale.',
-  'AI\'s every response is a statistical guess.',
-];
+// ---------- state ----------
+const aiHistory = [];        // for the AI endpoint (untouched logic)
+const cmdHistory = [];       // for arrow-key recall
+let cmdHistoryIdx = -1;
+let uptimeInterval = null;
 
-const redirectCommands = ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'];
-
-function getUptime() {
-  const born = new Date('1990-08-19T09:30:00Z');
-  const now = new Date();
-  const diff = now - born;
-  const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-  const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const secs = Math.floor((diff % (1000 * 60)) / 1000);
-  return years + 'y ' + days + 'd ' + hours + 'h ' + mins + 'm ' + secs + 's';
-}
-
+// ---------- helpers ----------
 function addLine(text, cls) {
   const span = document.createElement('span');
   span.className = 'line ' + (cls || '');
@@ -172,40 +153,107 @@ function addLine(text, cls) {
 }
 
 function addLines(lines) {
-  lines.forEach(function(l) { addLine(l.text, l.cls || ''); });
+  lines.forEach(l => addLine(l.text, l.cls || ''));
   addLine('');
 }
 
-function showThinkingDots() {
-  var span = document.createElement('span');
-  span.className = 'line dim';
-  span.textContent = '>';
-  output.appendChild(span);
-  output.scrollTop = output.scrollHeight;
-  var dots = 0;
-  var interval = setInterval(function() {
-    dots = (dots + 1) % 4;
-    span.textContent = '>' + '.'.repeat(dots);
-  }, 300);
-  return { element: span, stop: function() { clearInterval(interval); } };
+function clearUptime() {
+  if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
+}
+
+function getUptime() {
+  const born = new Date(config.birthDate);
+  const diff = new Date() - born;
+  const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+  const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${years}y ${days}d ${hours}h ${mins}m ${secs}s`;
 }
 
 function fadeAndRedirect(url) {
   document.body.classList.add('fade-out');
-  setTimeout(function() {
-    window.top.location.href = url;
-  }, 900);
+  setTimeout(() => { window.top.location.href = url; }, 900);
 }
 
+function showThinkingDots() {
+  const span = document.createElement('span');
+  span.className = 'line dim';
+  span.textContent = '>';
+  output.appendChild(span);
+  output.scrollTop = output.scrollHeight;
+  let dots = 0;
+  const interval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    span.textContent = '>' + '.'.repeat(dots);
+  }, 300);
+  return { element: span, stop: () => clearInterval(interval) };
+}
+
+// ---------- commands ----------
+const commands = {
+  help: () => addLines([
+    { text: 'available commands:', cls: 'dim' },
+    { text: '  sayhello' },
+    { text: '  funfact' },
+    { text: '  whoami' },
+    { text: '  uptime' },
+    { text: '  clear' },
+    { text: '  cat readme.txt' }
+  ]),
+
+  'cat readme.txt': () => addLines([
+    { text: 'this is the surface.' },
+    { text: 'the work lives somewhere else.' },
+    { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' }
+  ]),
+
+  clear: () => {
+    output.innerHTML = '';
+    addLine('');
+  },
+
+  cls: () => commands.clear(),
+
+  whoami: () => {
+    addLine('redirecting to /desktop...', 'dim');
+    setTimeout(() => fadeAndRedirect(config.desktopUrl), 600);
+  },
+
+  uptime: () => {
+    clearUptime();
+    const span = document.createElement('span');
+    span.className = 'line bright';
+    span.textContent = getUptime();
+    output.appendChild(span);
+    addLine('load average: variable', 'dim');
+    addLine('');
+    uptimeInterval = setInterval(() => { span.textContent = getUptime(); }, 1000);
+  },
+
+  funfact: () => {
+    const pick = config.funfacts[Math.floor(Math.random() * config.funfacts.length)];
+    addLine(pick);
+    addLine('');
+  },
+
+  sayhello: () => {
+    addLine('hello.', 'ai');
+    addLine('');
+  }
+};
+
+// ---------- ai fallback (untouched logic) ----------
 async function askAI(query) {
   var thinking = showThinkingDots();
-  history.push({ role: 'user', content: query });
+  aiHistory.push({ role: 'user', content: query });
 
   try {
-    const response = await fetch('https://alexcoman-landing.vercel.app/api/ask', {
+    const response = await fetch(config.apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: query, history: history.slice(-6) })
+      body: JSON.stringify({ query: query, history: aiHistory.slice(-6) })
     });
 
     const data = await response.json();
@@ -215,22 +263,26 @@ async function askAI(query) {
     thinking.element.remove();
 
     if (text) {
-      history.push({ role: 'assistant', content: text });
-      if (history.length > 6) history.splice(0, 2);
+      aiHistory.push({ role: 'assistant', content: text });
+      if (aiHistory.length > 6) aiHistory.splice(0, 2);
 
-      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
-       if (l.match(/^https?:\/\//)) {
+      const lines = text.split('\n').filter(function(l) { return l.trim(); });
+      const isOnlyUrl = lines.length === 1 && lines[0].trim().match(/^https?:\/\//);
+
+      lines.forEach(function(l) {
+        if (l.match(/^https?:\/\//)) {
+          var url = l.trim();
           var a = document.createElement('a');
-          a.href = l.trim();
-          a.textContent = '> ' + l.trim();
+          a.href = url;
+          a.textContent = '> ' + url;
           a.style.color = '#5DCAA5';
           a.style.display = 'block';
           a.className = 'line';
           output.appendChild(a);
           output.scrollTop = output.scrollHeight;
-          setTimeout(function() {
-            fadeAndRedirect(l.trim());
-          }, 1200);
+          if (isOnlyUrl) {
+            setTimeout(function() { fadeAndRedirect(url); }, 1200);
+          }
         } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
           var email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
           var a = document.createElement('a');
@@ -259,63 +311,65 @@ async function askAI(query) {
   }
 }
 
-input.addEventListener('keydown', function(e) {
+// ---------- input handling ----------
+input.addEventListener('keydown', e => {
+  // history navigation
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (cmdHistory.length === 0) return;
+    if (cmdHistoryIdx === -1) cmdHistoryIdx = cmdHistory.length;
+    cmdHistoryIdx = Math.max(0, cmdHistoryIdx - 1);
+    input.value = cmdHistory[cmdHistoryIdx] || '';
+    return;
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (cmdHistory.length === 0 || cmdHistoryIdx === -1) return;
+    cmdHistoryIdx++;
+    if (cmdHistoryIdx >= cmdHistory.length) {
+      cmdHistoryIdx = -1;
+      input.value = '';
+    } else {
+      input.value = cmdHistory[cmdHistoryIdx];
+    }
+    return;
+  }
+
   if (e.key !== 'Enter') return;
+
   const val = input.value.trim();
   const valLower = val.toLowerCase();
   if (!val) return;
+
+  cmdHistory.push(val);
+  cmdHistoryIdx = -1;
 
   addLine('alex@coman ~ % ' + val, 'dim');
   input.value = '';
   hint.textContent = '';
 
-  if (redirectCommands.indexOf(valLower) !== -1) {
+  // stop uptime ticker on next command
+  if (valLower !== 'uptime') clearUptime();
+
+  // redirect aliases
+  if (config.redirectCommands.indexOf(valLower) !== -1) {
     addLine('unlocking /desktop...', 'dim');
     addLine('redirecting.', 'ok');
-    setTimeout(function() {
-      fadeAndRedirect('https://alexcoman.me/desktop');
-    }, 800);
+    setTimeout(() => fadeAndRedirect(config.desktopUrl), 800);
     return;
   }
 
-  if (valLower === 'whoami') {
-    addLine('redirecting to /desktop...', 'dim');
-    setTimeout(function() {
-      fadeAndRedirect('https://alexcoman.me/desktop');
-    }, 600);
+  // command map
+  if (commands[valLower]) {
+    commands[valLower]();
     return;
   }
 
-  if (valLower === 'uptime') {
-    const span = document.createElement('span');
-    span.className = 'line bright';
-    span.textContent = getUptime();
-    output.appendChild(span);
-    addLine('load average: variable', 'dim');
-    addLine('');
-    const interval = setInterval(function() {
-      span.textContent = getUptime();
-    }, 1000);
-    setTimeout(function() { clearInterval(interval); }, 60000);
-    return;
-  }
-
-  if (valLower === 'funfact') {
-    const shuffled = funfactList.slice().sort(function() { return 0.5 - Math.random(); });
-    addLine(shuffled[0], '');
-    addLine('');
-    return;
-  }
-
-  const resp = responses[valLower];
-  if (resp) {
-    addLines(resp);
-  } else {
-    askAI(val);
-  }
+  // fallback: AI
+  askAI(val);
 });
 
-input.addEventListener('input', function() {
+input.addEventListener('input', () => {
   const v = input.value.toLowerCase();
   if (v.indexOf('open') === 0 || v.indexOf('cd') === 0 || v === 'desktop') {
     hint.textContent = '→ this will take you somewhere';
