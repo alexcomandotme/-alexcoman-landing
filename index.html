@@ -47,7 +47,6 @@
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
 
-  /* Scanline */
   .scanline {
     position: fixed;
     top: 0;
@@ -99,11 +98,6 @@
     margin-top: 1rem;
     letter-spacing: 0.04em;
     min-height: 16px;
-  }
-
-  .thinking-dots {
-    color: rgba(255,255,255,0.3);
-    display: block;
   }
 </style>
 </head>
@@ -182,33 +176,17 @@ function addLines(lines) {
   addLine('');
 }
 
-function typeText(element, text, speed, callback) {
-  var i = 0;
-  element.textContent = '';
-  var interval = setInterval(function() {
-    element.textContent += text[i];
-    i++;
-    output.scrollTop = output.scrollHeight;
-    if (i >= text.length) {
-      clearInterval(interval);
-      if (callback) callback();
-    }
-  }, speed);
-}
-
 function showThinkingDots() {
   var span = document.createElement('span');
-  span.className = 'line thinking-dots';
+  span.className = 'line dim';
   span.textContent = '>';
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
-
   var dots = 0;
   var interval = setInterval(function() {
     dots = (dots + 1) % 4;
     span.textContent = '>' + '.'.repeat(dots);
   }, 300);
-
   return { element: span, stop: function() { clearInterval(interval); } };
 }
 
@@ -240,40 +218,24 @@ async function askAI(query) {
       history.push({ role: 'assistant', content: text });
       if (history.length > 6) history.splice(0, 2);
 
-      var lines = text.split('\n').filter(function(l) { return l.trim(); });
-      var i = 0;
-
-      function nextLine() {
-        if (i >= lines.length) {
-          addLine('');
-          return;
-        }
-        var l = lines[i];
-        i++;
-
+      text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
         if (l.match(/^https?:\/\//)) {
           var a = document.createElement('a');
           a.href = l.trim();
-          a.textContent = '> ';
+          a.textContent = '> ' + l.trim();
           a.style.color = '#5DCAA5';
           a.style.display = 'block';
           a.className = 'line';
           output.appendChild(a);
-          typeText(a, '> ' + l.trim(), 18, function() {
-            setTimeout(function() {
-              fadeAndRedirect(l.trim());
-            }, 1200);
-            nextLine();
-          });
+          output.scrollTop = output.scrollHeight;
+          setTimeout(function() {
+            fadeAndRedirect(l.trim());
+          }, 1200);
         } else {
-          var span = document.createElement('span');
-          span.className = 'line ai';
-          output.appendChild(span);
-          typeText(span, '> ' + l, 18, nextLine);
+          addLine('> ' + l, 'ai');
         }
-      }
-
-      nextLine();
+      });
+      addLine('');
     } else {
       addLine('> no response.', 'err');
       addLine('');
