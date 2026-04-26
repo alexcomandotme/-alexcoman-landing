@@ -29,13 +29,14 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     margin-bottom: 2rem;
+    font-weight: 700;
   }
 
   .term-output {
     font-size: 15px;
     color: rgba(255,255,255,0.6);
     line-height: 2;
-    font-weight: 400;
+    font-weight: 700;
     position: relative;
     overflow-y: auto;
     max-height: 60vh;
@@ -61,6 +62,7 @@
     font-size: 15px;
     color: rgba(255,255,255,0.3);
     white-space: nowrap;
+    font-weight: 700;
   }
 
   #term-input {
@@ -68,13 +70,17 @@
     border: none;
     outline: none;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 700;
     color: #fff;
     flex: 1;
     caret-color: #fff;
   }
 
-  #term-input::placeholder { color: rgba(255,255,255,0.2); }
+  #term-input::placeholder {
+    color: rgba(255,255,255,0.2);
+    font-weight: 700;
+  }
 
   .hint {
     font-size: 11px;
@@ -82,13 +88,14 @@
     margin-top: 1rem;
     letter-spacing: 0.04em;
     min-height: 16px;
+    font-weight: 700;
   }
 
   @media (max-width: 640px) {
     body { padding: 1.5rem 1.25rem; }
     .term-output { font-size: 14px; max-height: 55vh; }
-    .term-prompt { font-size: 13px; }
-    #term-input { font-size: 16px; }
+    .term-prompt { font-size: 14px; }
+    #term-input { font-size: 16px; } /* prevents iOS zoom */
   }
 </style>
 </head>
@@ -118,6 +125,8 @@ const config = {
   desktopUrl: 'https://alexcoman.me/desktop',
   apiUrl: 'https://alexcoman-landing.vercel.app/api/ask',
   birthDate: '1990-08-19T09:30:00Z',
+  email: 'hi@alexcoman.me',
+  contactKeywords: ['contact', 'email', 'reach', 'mail', 'get in touch', 'hire', 'work with'],
   funfacts: [
     "LLMs don't actually think. they autocomplete at scale.",
     "AI's every response is a statistical guess."
@@ -130,15 +139,14 @@ const output = document.getElementById('output');
 const hint = document.getElementById('hint');
 const loginLine = document.getElementById('login-line');
 
-// last login timestamp
 loginLine.textContent = 'last login: ' + new Date().toLocaleString('en-GB', {
   weekday: 'short', month: 'short', day: '2-digit',
   hour: '2-digit', minute: '2-digit'
 });
 
 // ---------- state ----------
-const aiHistory = [];        // for the AI endpoint (untouched logic)
-const cmdHistory = [];       // for arrow-key recall
+const aiHistory = [];
+const cmdHistory = [];
 let cmdHistoryIdx = -1;
 let uptimeInterval = null;
 
@@ -155,6 +163,23 @@ function addLine(text, cls) {
 function addLines(lines) {
   lines.forEach(l => addLine(l.text, l.cls || ''));
   addLine('');
+}
+
+function addEmailLink(label) {
+  const a = document.createElement('a');
+  a.href = 'mailto:' + config.email;
+  a.textContent = '> ' + (label || config.email);
+  a.style.color = '#5DCAA5';
+  a.style.display = 'block';
+  a.className = 'line';
+  a.target = '_top';
+  output.appendChild(a);
+  output.scrollTop = output.scrollHeight;
+  return a;
+}
+
+function openMailto() {
+  window.top.location.href = 'mailto:' + config.email;
 }
 
 function clearUptime() {
@@ -239,12 +264,28 @@ const commands = {
   },
 
   sayhello: () => {
-    addLine('hello.', 'ai');
+    addLine('opening mail client...', 'dim');
+    addEmailLink(config.email);
     addLine('');
+    setTimeout(openMailto, 600);
   }
 };
 
-// ---------- ai fallback (untouched logic) ----------
+// ---------- contact intent (intercepts AI) ----------
+function isContactIntent(query) {
+  const q = query.toLowerCase();
+  return config.contactKeywords.some(k => q.includes(k));
+}
+
+function handleContact() {
+  addLine('> contact alex directly:', 'ai');
+  addEmailLink(config.email);
+  addLine('opening mail client...', 'dim');
+  addLine('');
+  setTimeout(openMailto, 700);
+}
+
+// ---------- ai fallback (logic untouched) ----------
 async function askAI(query) {
   var thinking = showThinkingDots();
   aiHistory.push({ role: 'user', content: query });
@@ -313,7 +354,6 @@ async function askAI(query) {
 
 // ---------- input handling ----------
 input.addEventListener('keydown', e => {
-  // history navigation
   if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (cmdHistory.length === 0) return;
@@ -348,10 +388,8 @@ input.addEventListener('keydown', e => {
   input.value = '';
   hint.textContent = '';
 
-  // stop uptime ticker on next command
   if (valLower !== 'uptime') clearUptime();
 
-  // redirect aliases
   if (config.redirectCommands.indexOf(valLower) !== -1) {
     addLine('unlocking /desktop...', 'dim');
     addLine('redirecting.', 'ok');
@@ -359,13 +397,16 @@ input.addEventListener('keydown', e => {
     return;
   }
 
-  // command map
   if (commands[valLower]) {
     commands[valLower]();
     return;
   }
 
-  // fallback: AI
+  if (isContactIntent(val)) {
+    handleContact();
+    return;
+  }
+
   askAI(val);
 });
 
