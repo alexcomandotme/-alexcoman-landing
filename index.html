@@ -18,7 +18,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    transition: opacity 0.8s ease;
+    transition: opacity 0.4s ease;
   }
 
   body.fade-out { opacity: 0; }
@@ -179,7 +179,12 @@ function addEmailLink(label) {
 }
 
 function openMailto() {
-  window.top.location.href = 'mailto:' + config.email;
+  const a = document.createElement('a');
+  a.href = 'mailto:' + config.email;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function clearUptime() {
@@ -199,7 +204,7 @@ function getUptime() {
 
 function fadeAndRedirect(url) {
   document.body.classList.add('fade-out');
-  setTimeout(() => { window.top.location.href = url; }, 900);
+  setTimeout(() => { window.top.location.href = url; }, 450);
 }
 
 function showThinkingDots() {
@@ -267,7 +272,7 @@ const commands = {
     addLine('opening mail client...', 'dim');
     addEmailLink(config.email);
     addLine('');
-    setTimeout(openMailto, 600);
+    setTimeout(openMailto, 200);
   }
 };
 
@@ -282,7 +287,7 @@ function handleContact() {
   addEmailLink(config.email);
   addLine('opening mail client...', 'dim');
   addLine('');
-  setTimeout(openMailto, 700);
+  setTimeout(openMailto, 200);
 }
 
 // ---------- ai fallback (logic untouched) ----------
