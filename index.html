@@ -157,6 +157,32 @@ function addLines(lines) {
   addLine('');
 }
 
+function copyToClipboard(text) {
+  // modern API (HTTPS only)
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  // fallback for file:// and http://
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      ok ? resolve() : reject();
+    } catch (e) {
+      document.body.removeChild(ta);
+      reject(e);
+    }
+  });
+}
+
 function addEmailBlock() {
   // email line — click to copy
   const emailLine = document.createElement('span');
@@ -165,13 +191,13 @@ function addEmailBlock() {
   emailLine.style.cursor = 'pointer';
   emailLine.textContent = '> ' + config.email + '  [click to copy]';
   emailLine.addEventListener('click', () => {
-    navigator.clipboard.writeText(config.email).then(() => {
+    copyToClipboard(config.email).then(() => {
       emailLine.textContent = '> ' + config.email + '  [copied]';
       setTimeout(() => {
         emailLine.textContent = '> ' + config.email + '  [click to copy]';
       }, 1500);
     }).catch(() => {
-      emailLine.textContent = '> ' + config.email + '  [copy failed]';
+      emailLine.textContent = '> ' + config.email + '  [copy failed — select manually]';
     });
   });
   output.appendChild(emailLine);
