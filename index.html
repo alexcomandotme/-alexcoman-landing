@@ -219,7 +219,7 @@ async function askAI(query) {
       if (history.length > 6) history.splice(0, 2);
 
       text.split('\n').filter(function(l) { return l.trim(); }).forEach(function(l) {
-        if (l.match(/^https?:\/\//)) {
+       if (l.match(/^https?:\/\//)) {
           var a = document.createElement('a');
           a.href = l.trim();
           a.textContent = '> ' + l.trim();
@@ -231,6 +231,17 @@ async function askAI(query) {
           setTimeout(function() {
             fadeAndRedirect(l.trim());
           }, 1200);
+        } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
+          var email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
+          var a = document.createElement('a');
+          a.href = 'mailto:' + email;
+          a.textContent = '> ' + l.trim();
+          a.style.color = '#5DCAA5';
+          a.style.display = 'block';
+          a.className = 'line';
+          a.target = '_top';
+          output.appendChild(a);
+          output.scrollTop = output.scrollHeight;
         } else {
           addLine('> ' + l, 'ai');
         }
