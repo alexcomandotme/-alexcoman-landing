@@ -104,8 +104,6 @@
 <div class="term-header">alexcoman.me</div>
 
 <div class="term-output" id="output">
-  <span class="line dim" id="login-line"></span>
-  <span class="line">&nbsp;</span>
   <span class="line">you're at the surface.</span>
   <span class="line dim">there's more underneath.</span>
   <span class="line">&nbsp;</span>
@@ -137,12 +135,6 @@ const config = {
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 const hint = document.getElementById('hint');
-const loginLine = document.getElementById('login-line');
-
-loginLine.textContent = 'last login: ' + new Date().toLocaleString('en-GB', {
-  weekday: 'short', month: 'short', day: '2-digit',
-  hour: '2-digit', minute: '2-digit'
-});
 
 // ---------- state ----------
 const aiHistory = [];
@@ -269,7 +261,7 @@ const commands = {
   },
 
   sayhello: () => {
-    addLine('opening mail client...', 'dim');
+    addLine('reach out:', 'dim');
     addEmailLink(config.email);
     addLine('');
     setTimeout(openMailto, 200);
@@ -283,9 +275,8 @@ function isContactIntent(query) {
 }
 
 function handleContact() {
-  addLine('> contact alex directly:', 'ai');
+  addLine('> reach out:', 'ai');
   addEmailLink(config.email);
-  addLine('opening mail client...', 'dim');
   addLine('');
   setTimeout(openMailto, 200);
 }
