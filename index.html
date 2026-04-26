@@ -125,6 +125,11 @@ const config = {
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 
+// force focus on load (autofocus is unreliable in iframes)
+window.addEventListener('load', () => input.focus());
+window.addEventListener('focus', () => input.focus());
+document.addEventListener('click', () => input.focus());
+
 // ---------- state ----------
 const aiHistory = [];
 const cmdHistory = [];
