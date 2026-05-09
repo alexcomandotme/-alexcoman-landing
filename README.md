@@ -17,7 +17,10 @@
 
 | layer     | tech                          |
 |-----------|-------------------------------|
-a
+| UI        | static HTML + JetBrains Mono  |
+| AI        | Groq / llama-3.3-70b          |
+| hosting   | Vercel                        |
+| embedded  | Cargo via iframe              |
 
 ## structure
 
