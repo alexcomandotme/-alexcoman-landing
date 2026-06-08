@@ -86,7 +86,7 @@
     body { padding: 1.5rem 1.25rem; }
     .term-output { font-size: 14px; max-height: 55vh; }
     .term-prompt { font-size: 14px; }
-    #term-input { font-size: 16px; } /* prevents iOS zoom */
+    #term-input { font-size: 16px; }
   }
 </style>
 </head>
@@ -107,7 +107,6 @@
 </div>
 
 <script>
-// ---------- config ----------
 const config = {
   redirectCommands: ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'],
   desktopUrl: 'https://alexcoman.me/desktop',
@@ -121,22 +120,18 @@ const config = {
   ]
 };
 
-// ---------- dom ----------
 const input = document.getElementById('term-input');
 const output = document.getElementById('output');
 
-// force focus on load (autofocus is unreliable in iframes)
 window.addEventListener('load', () => input.focus());
 window.addEventListener('focus', () => input.focus());
 document.addEventListener('click', () => input.focus());
 
-// ---------- state ----------
 const aiHistory = [];
 const cmdHistory = [];
 let cmdHistoryIdx = -1;
 let uptimeInterval = null;
 
-// ---------- helpers ----------
 function addLine(text, cls) {
   const span = document.createElement('span');
   span.className = 'line ' + (cls || '');
@@ -152,11 +147,9 @@ function addLines(lines) {
 }
 
 function copyToClipboard(text) {
-  // modern API (HTTPS only)
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text);
   }
-  // fallback for file:// and http://
   return new Promise((resolve, reject) => {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -178,19 +171,17 @@ function copyToClipboard(text) {
 }
 
 function addEmailBlock() {
-  // email line — click to copy
   const emailLine = document.createElement('div');
   emailLine.className = 'line';
   emailLine.style.color = '#5DCAA5';
   emailLine.style.cursor = 'pointer';
   emailLine.style.userSelect = 'text';
 
-  // split email + insert zero-width space to defeat auto-linkify (Cargo, etc)
   const [user, domain] = config.email.split('@');
   const prefix = document.createElement('span');
   prefix.textContent = '> ';
   const userSpan = document.createElement('span');
-  userSpan.textContent = user + '\u200B'; // ZWSP after user
+  userSpan.textContent = user + '\u200B';
   const at = document.createElement('span');
   at.textContent = '@';
   const domainSpan = document.createElement('span');
@@ -214,7 +205,6 @@ function addEmailBlock() {
 
   output.appendChild(emailLine);
 
-  // gmail shortcut
   const gmailLink = document.createElement('a');
   gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(config.email);
   gmailLink.target = '_blank';
@@ -261,7 +251,6 @@ function showThinkingDots() {
   return { element: span, stop: () => clearInterval(interval) };
 }
 
-// ---------- commands ----------
 const commands = {
   help: () => addLines([
     { text: 'available commands:', cls: 'dim' },
@@ -314,7 +303,6 @@ const commands = {
   }
 };
 
-// ---------- contact intent (intercepts AI) ----------
 function isContactIntent(query) {
   const q = query.toLowerCase();
   return config.contactKeywords.some(k => q.includes(k));
@@ -326,7 +314,6 @@ function handleContact() {
   addLine('');
 }
 
-// ---------- ai fallback (logic untouched) ----------
 async function askAI(query) {
   var thinking = showThinkingDots();
   aiHistory.push({ role: 'user', content: query });
@@ -335,7 +322,11 @@ async function askAI(query) {
     const response = await fetch(config.apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: query, history: aiHistory.slice(-6) })
+      body: JSON.stringify({
+        query: query,
+        history: aiHistory.slice(-6),
+        isMobile: window.innerWidth < 768
+      })
     });
 
     const data = await response.json();
@@ -393,7 +384,6 @@ async function askAI(query) {
   }
 }
 
-// ---------- input handling ----------
 input.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp') {
     e.preventDefault();
