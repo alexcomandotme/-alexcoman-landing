@@ -134,6 +134,19 @@ const cmdHistory = [];
 let cmdHistoryIdx = -1;
 let uptimeInterval = null;
 
+// ── NEW: link tracking state ─────────────────────────────────
+let linksShown = [];          // ['photography', 'film', ...]
+let lastOfferedLink = null;   // the URL most recently offered with "take you there?"
+
+function linkNameFromUrl(url) {
+  if (!url) return null;
+  if (url.includes('alex-coman-photography')) return 'photography';
+  if (url.includes('alex-coman-experimental')) return 'experimental';
+  if (url.includes('alex-coman-film')) return 'film';
+  return null;
+}
+// ─────────────────────────────────────────────────────────────
+
 function addLine(text, cls) {
   const span = document.createElement('span');
   span.className = 'line ' + (cls || '');
@@ -239,6 +252,11 @@ function fadeAndRedirect(url) {
   setTimeout(() => { window.top.location.href = url; }, 450);
 }
 
+// NEW: open in a new tab (used for underneath links — keeps terminal alive)
+function openInNewTab(url) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 function showThinkingDots() {
   const span = document.createElement('span');
   span.className = 'line dim';
@@ -327,7 +345,10 @@ async function askAI(query) {
       body: JSON.stringify({
         query: query,
         history: aiHistory.slice(-6),
-        isMobile: window.innerWidth < 768
+        isMobile: window.innerWidth < 768,
+        // NEW: send tracking state
+        linksShown: linksShown,
+        lastOfferedLink: lastOfferedLink
       })
     });
 
@@ -337,27 +358,49 @@ async function askAI(query) {
     thinking.stop();
     thinking.element.remove();
 
+    // ── NEW: auto-redirect when user said "yes" to a prior offer ──
+    if (data.redirect) {
+      addLine('> ' + (text || 'opening.'), 'ai');
+      addLine('');
+      // mark the link as shown so AI doesn't re-offer
+      const name = linkNameFromUrl(data.redirect);
+      if (name && !linksShown.includes(name)) linksShown.push(name);
+      // clear the pending offer
+      lastOfferedLink = null;
+      // open in new tab — keep terminal alive
+      setTimeout(() => openInNewTab(data.redirect), 400);
+      return;
+    }
+
+    // ── NEW: store offered link (if AI offered one this turn) ──
+    if (data.offeredLink) {
+      lastOfferedLink = data.offeredLink;
+      const name = linkNameFromUrl(data.offeredLink);
+      if (name && !linksShown.includes(name)) linksShown.push(name);
+    } else {
+      // no offer this turn → clear stale pending offer
+      lastOfferedLink = null;
+    }
+
     if (text) {
       aiHistory.push({ role: 'assistant', content: text });
       if (aiHistory.length > 6) aiHistory.splice(0, 2);
 
       const lines = text.split('\n').filter(function(l) { return l.trim(); });
-      const isOnlyUrl = lines.length === 1 && lines[0].trim().match(/^https?:\/\//);
 
       lines.forEach(function(l) {
         if (l.match(/^https?:\/\//)) {
           var url = l.trim();
           var a = document.createElement('a');
           a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
           a.textContent = '> ' + url;
           a.style.color = '#5DCAA5';
           a.style.display = 'block';
           a.className = 'line';
           output.appendChild(a);
           output.scrollTop = output.scrollHeight;
-          if (isOnlyUrl) {
-            setTimeout(function() { fadeAndRedirect(url); }, 1200);
-          }
         } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
           var email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
           var a = document.createElement('a');
