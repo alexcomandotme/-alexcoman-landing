@@ -249,12 +249,16 @@ function getUptime() {
 
 function fadeAndRedirect(url) {
   document.body.classList.add('fade-out');
-  setTimeout(() => { window.top.location.href = url; }, 450);
-}
-
-// NEW: open in a new tab (used for underneath links — keeps terminal alive)
-function openInNewTab(url) {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(() => {
+    // Try to navigate the top-level page (works if same-origin OR
+    // if user activation is still valid). Fall back to navigating the
+    // iframe itself if cross-origin blocks the top-level write.
+    try {
+      window.top.location.href = url;
+    } catch (e) {
+      window.location.href = url;
+    }
+  }, 450);
 }
 
 function showThinkingDots() {
@@ -367,8 +371,8 @@ async function askAI(query) {
       if (name && !linksShown.includes(name)) linksShown.push(name);
       // clear the pending offer
       lastOfferedLink = null;
-      // open in new tab — keep terminal alive
-      setTimeout(() => openInNewTab(data.redirect), 400);
+      // redirect in same tab with fade
+      setTimeout(() => fadeAndRedirect(data.redirect), 400);
       return;
     }
 
@@ -391,15 +395,18 @@ async function askAI(query) {
       lines.forEach(function(l) {
         if (l.match(/^https?:\/\//)) {
           var url = l.trim();
-          var a = document.createElement('a');
-          a.href = url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.textContent = '> ' + url;
-          a.style.color = '#5DCAA5';
-          a.style.display = 'block';
-          a.className = 'line';
-          output.appendChild(a);
+          var s = document.createElement('span');
+          s.textContent = '> ' + url;
+          s.style.color = '#5DCAA5';
+          s.style.cursor = 'pointer';
+          s.style.display = 'block';
+          s.className = 'line';
+          s.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            fadeAndRedirect(url);
+          });
+          output.appendChild(s);
           output.scrollTop = output.scrollHeight;
         } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
           var email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
