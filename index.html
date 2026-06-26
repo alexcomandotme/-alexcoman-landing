@@ -375,8 +375,8 @@ async function askAI(query) {
           // auto-open in new tab when AI returns a link
           openInNewTab(fullUrl);
 
-        } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
-          const email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
+        } else if (l.trim().match(/^[\w.]+@[\w.]+\.\w+$/)) {
+          const email = l.trim();
           const a = document.createElement('a');
           a.href = 'mailto:' + email;
           a.textContent = '> ' + l.trim();
