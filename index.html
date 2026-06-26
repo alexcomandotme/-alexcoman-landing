@@ -9,9 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   html, body { height: 100%; }
-
   body {
     background: transparent;
     font-family: 'JetBrains Mono', monospace;
@@ -22,9 +20,7 @@
     justify-content: center;
     transition: opacity 0.4s ease;
   }
-
   body.fade-out { opacity: 0; }
-
   .term-header {
     font-size: 15px;
     color: rgba(255,255,255,0.35);
@@ -33,7 +29,6 @@
     margin-bottom: 2rem;
     font-weight: 700;
   }
-
   .term-output {
     font-size: 15px;
     color: rgba(255,255,255,0.6);
@@ -43,14 +38,12 @@
     overflow-y: auto;
     max-height: 60vh;
   }
-
   .term-output .line { display: block; white-space: pre-wrap; word-break: break-word; }
   .term-output .dim { color: rgba(255,255,255,0.3); }
   .term-output .bright { color: #fff; }
   .term-output .ok { color: #1D9E75; }
   .term-output .err { color: #E24B4A; }
   .term-output .ai { color: #5DCAA5; }
-
   .term-input-row {
     display: flex;
     align-items: center;
@@ -59,14 +52,12 @@
     border-top: 0.5px solid rgba(255,255,255,0.12);
     padding-top: 1.5rem;
   }
-
   .term-prompt {
     font-size: 15px;
     color: rgba(255,255,255,0.3);
     white-space: nowrap;
     font-weight: 700;
   }
-
   #term-input {
     background: transparent;
     border: none;
@@ -78,12 +69,17 @@
     flex: 1;
     caret-color: #fff;
   }
-
   #term-input::placeholder {
     color: rgba(255,255,255,0.5);
     font-weight: 700;
   }
-
+  .ai-link {
+    color: #5DCAA5;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+  }
+  .ai-link:hover { text-decoration: underline; }
   @media (max-width: 640px) {
     body { padding: 1.5rem 1.25rem; }
     .term-output { font-size: 14px; max-height: 55vh; }
@@ -133,19 +129,7 @@ const aiHistory = [];
 const cmdHistory = [];
 let cmdHistoryIdx = -1;
 let uptimeInterval = null;
-
-// ── NEW: link tracking state ─────────────────────────────────
-let linksShown = [];          // ['photography', 'film', ...]
-let lastOfferedLink = null;   // the URL most recently offered with "take you there?"
-
-function linkNameFromUrl(url) {
-  if (!url) return null;
-  if (url.includes('alex-coman-photography')) return 'photography';
-  if (url.includes('alex-coman-experimental')) return 'experimental';
-  if (url.includes('alex-coman-film')) return 'film';
-  return null;
-}
-// ─────────────────────────────────────────────────────────────
+let linksShown = [];
 
 function addLine(text, cls) {
   const span = document.createElement('span');
@@ -159,6 +143,18 @@ function addLine(text, cls) {
 function addLines(lines) {
   lines.forEach(l => addLine(l.text, l.cls || ''));
   addLine('');
+}
+
+function openInNewTab(url) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function fadeAndRedirect(url) {
+  document.body.classList.add('fade-out');
+  setTimeout(() => {
+    try { window.top.location.href = url; }
+    catch (e) { window.location.href = url; }
+  }, 450);
 }
 
 function copyToClipboard(text) {
@@ -206,7 +202,6 @@ function addEmailBlock() {
   status.style.color = 'rgba(255,255,255,0.4)';
 
   emailLine.append(prefix, userSpan, at, domainSpan, status);
-
   emailLine.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -228,7 +223,6 @@ function addEmailBlock() {
   gmailLink.className = 'line';
   gmailLink.style.color = 'rgba(255,255,255,0.4)';
   output.appendChild(gmailLink);
-
   output.scrollTop = output.scrollHeight;
 }
 
@@ -245,20 +239,6 @@ function getUptime() {
   const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const secs = Math.floor((diff % (1000 * 60)) / 1000);
   return `${years}y ${days}d ${hours}h ${mins}m ${secs}s`;
-}
-
-function fadeAndRedirect(url) {
-  document.body.classList.add('fade-out');
-  setTimeout(() => {
-    // Try to navigate the top-level page (works if same-origin OR
-    // if user activation is still valid). Fall back to navigating the
-    // iframe itself if cross-origin blocks the top-level write.
-    try {
-      window.top.location.href = url;
-    } catch (e) {
-      window.location.href = url;
-    }
-  }, 450);
 }
 
 function showThinkingDots() {
@@ -339,7 +319,7 @@ function handleContact() {
 }
 
 async function askAI(query) {
-  var thinking = showThinkingDots();
+  const thinking = showThinkingDots();
   aiHistory.push({ role: 'user', content: query });
 
   try {
@@ -350,9 +330,7 @@ async function askAI(query) {
         query: query,
         history: aiHistory.slice(-6),
         isMobile: window.innerWidth < 768,
-        // NEW: send tracking state
-        linksShown: linksShown,
-        lastOfferedLink: lastOfferedLink
+        linksShown: linksShown
       })
     });
 
@@ -362,55 +340,44 @@ async function askAI(query) {
     thinking.stop();
     thinking.element.remove();
 
-    // ── NEW: auto-redirect when user said "yes" to a prior offer ──
-    if (data.redirect) {
-      addLine('> ' + (text || 'opening.'), 'ai');
-      addLine('');
-      // mark the link as shown so AI doesn't re-offer
-      const name = linkNameFromUrl(data.redirect);
-      if (name && !linksShown.includes(name)) linksShown.push(name);
-      // clear the pending offer
-      lastOfferedLink = null;
-      // redirect in same tab with fade
-      setTimeout(() => fadeAndRedirect(data.redirect), 400);
-      return;
-    }
-
-    // ── NEW: store offered link (if AI offered one this turn) ──
-    if (data.offeredLink) {
-      lastOfferedLink = data.offeredLink;
-      const name = linkNameFromUrl(data.offeredLink);
-      if (name && !linksShown.includes(name)) linksShown.push(name);
-    } else {
-      // no offer this turn → clear stale pending offer
-      lastOfferedLink = null;
-    }
-
     if (text) {
       aiHistory.push({ role: 'assistant', content: text });
       if (aiHistory.length > 6) aiHistory.splice(0, 2);
 
-      const lines = text.split('\n').filter(function(l) { return l.trim(); });
+      const lines = text.split('\n').filter(l => l.trim());
 
-      lines.forEach(function(l) {
-        if (l.match(/^https?:\/\//)) {
-          var url = l.trim();
-          var s = document.createElement('span');
-          s.textContent = '> ' + url;
-          s.style.color = '#5DCAA5';
-          s.style.cursor = 'pointer';
-          s.style.display = 'block';
-          s.className = 'line';
-          s.addEventListener('click', function(ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            fadeAndRedirect(url);
+      lines.forEach(l => {
+        // URL pattern — alexcoman.me/... or https://...
+        const urlMatch = l.trim().match(/(?:https?:\/\/)?alexcoman\.me\/[a-z0-9\-]+/i)
+          || l.trim().match(/^https?:\/\/\S+/);
+
+        if (urlMatch) {
+          const rawUrl = urlMatch[0];
+          const fullUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+
+          // track shown links
+          if (!linksShown.includes(fullUrl)) linksShown.push(fullUrl);
+
+          const a = document.createElement('a');
+          a.href = fullUrl;
+          a.textContent = '> ' + rawUrl;
+          a.className = 'line ai-link';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          // open in new tab on click, don't navigate away
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            openInNewTab(fullUrl);
           });
-          output.appendChild(s);
+          output.appendChild(a);
           output.scrollTop = output.scrollHeight;
+
+          // auto-open in new tab when AI returns a link
+          openInNewTab(fullUrl);
+
         } else if (l.match(/[\w.]+@[\w.]+\.\w+/)) {
-          var email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
-          var a = document.createElement('a');
+          const email = l.match(/[\w.]+@[\w.]+\.\w+/)[0];
+          const a = document.createElement('a');
           a.href = 'mailto:' + email;
           a.textContent = '> ' + l.trim();
           a.style.color = '#5DCAA5';
