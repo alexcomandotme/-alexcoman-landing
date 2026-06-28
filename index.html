@@ -9,17 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { height: 100%; }
-  body {
-    background: transparent;
-    font-family: 'JetBrains Mono', monospace;
-    height: 100%;
+  html, body { height: 100%; overflow: hidden; background: transparent; }
+  
+  #terminal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     flex-direction: column;
-    transition: opacity 0.4s ease;
-    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1rem 1rem 0;
   }
-  body.fade-out { opacity: 0; }
 
   .term-header {
     font-size: 10px;
@@ -27,35 +26,33 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     font-weight: 700;
-    padding: 1rem 1rem 0.75rem;
+    margin-bottom: 0.75rem;
     flex-shrink: 0;
   }
 
-  .term-output {
-    font-size: 11px;
-    color: rgba(255,255,255,0.6);
-    line-height: 1.6;
-    font-weight: 700;
+  #output {
     flex: 1;
     overflow-y: auto;
-    padding: 0 1rem;
     -webkit-overflow-scrolling: touch;
+    font-size: 11px;
+    line-height: 1.6;
+    font-weight: 700;
   }
-  .term-output .line { display: block; white-space: pre-wrap; word-break: break-word; }
-  .term-output .dim { color: rgba(255,255,255,0.3); }
-  .term-output .bright { color: #fff; }
-  .term-output .ok { color: #1D9E75; }
-  .term-output .err { color: #E24B4A; }
-  .term-output .ai { color: #5DCAA5; }
+  #output .line { display: block; white-space: pre-wrap; word-break: break-word; }
+  #output .dim   { color: rgba(255,255,255,0.3); }
+  #output .bright{ color: #fff; }
+  #output .ok    { color: #1D9E75; }
+  #output .err   { color: #E24B4A; }
+  #output .ai    { color: rgba(255,255,255,0.6); }
+  #output .link  { color: #5DCAA5; }
 
   .term-input-row {
     display: flex;
     align-items: center;
     gap: 6px;
     border-top: 0.5px solid rgba(255,255,255,0.12);
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0;
     flex-shrink: 0;
-    background: transparent;
   }
   .term-prompt {
     font-size: 10px;
@@ -76,283 +73,151 @@
     -webkit-appearance: none;
     border-radius: 0;
   }
-  #term-input::placeholder {
-    color: rgba(255,255,255,0.4);
-    font-weight: 700;
-  }
-  .ai-link {
-    color: #5DCAA5;
-    cursor: pointer;
-    display: block;
-    text-decoration: none;
-  }
-  .ai-link:hover { text-decoration: underline; }
+  #term-input::placeholder { color: rgba(255,255,255,0.4); }
 </style>
 </head>
 <body>
-
-<div class="term-header">alexcoman.me</div>
-
-<div class="term-output" id="output">
-  <span class="line">operations, systems. you're at the surface.</span>
-  <span class="line dim">there's more underneath.</span>
-  <span class="line">&nbsp;</span>
-  <span class="line">&gt; what are you looking for?</span>
-  <span class="line">&nbsp;</span>
-</div>
-
-<div class="term-input-row">
-  <span class="term-prompt">alex@coman ~ %</span>
-  <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command..." />
+<div id="terminal">
+  <div class="term-header">alexcoman.me</div>
+  <div id="output">
+    <span class="line ai">operations, systems. you're at the surface.</span>
+    <span class="line dim">there's more underneath.</span>
+    <span class="line">&nbsp;</span>
+    <span class="line ai">&gt; the background / the approach / work with alex</span>
+    <span class="line">&nbsp;</span>
+  </div>
+  <div class="term-input-row">
+    <span class="term-prompt">alex@coman ~ %</span>
+    <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command..." />
+  </div>
 </div>
 
 <script>
-const config = {
-  redirectCommands: ['open desktop', 'cd desktop', 'cd /desktop', 'desktop'],
-  desktopUrl: 'https://alexcoman.me/desktop',
-  apiUrl: 'https://alexcoman-landing.vercel.app/api/ask',
-  email: 'hi@alexcoman.me',
-  contactKeywords: ['contact', 'email', 'reach', 'mail', 'get in touch', 'hire', 'work with'],
-};
+const API_URL = 'https://alexcoman-landing.vercel.app/api/ask';
+const input   = document.getElementById('term-input');
+const output  = document.getElementById('output');
+const terminal = document.getElementById('terminal');
 
-const input = document.getElementById('term-input');
-const output = document.getElementById('output');
-
-// Handle iOS visual viewport resize (keyboard show/hide)
+// ── iOS keyboard: shrink terminal to visual viewport ──
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    document.body.style.height = window.visualViewport.height + 'px';
+  const vv = window.visualViewport;
+  function onVVResize() {
+    terminal.style.height = vv.height + 'px';
+    terminal.style.top    = vv.offsetTop + 'px';
     output.scrollTop = output.scrollHeight;
-  });
+  }
+  vv.addEventListener('resize', onVVResize);
+  vv.addEventListener('scroll', onVVResize);
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target !== input) input.focus();
+// keep input focused — but only when tapping inside terminal, not on links
+terminal.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'A') input.focus();
 });
 
-const aiHistory = [];
-const cmdHistory = [];
-let cmdHistoryIdx = -1;
-let linksShown = [];
+const history = [];
 
 function addLine(text, cls) {
   const span = document.createElement('span');
-  span.className = 'line ' + (cls || '');
+  span.className = 'line' + (cls ? ' ' + cls : '');
   span.textContent = text;
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
-  return span;
 }
 
-function addLines(lines) {
-  lines.forEach(l => addLine(l.text, l.cls || ''));
-  addLine('');
-}
+function renderResponse(text) {
+  const lines = text.split('\n');
+  lines.forEach(raw => {
+    const l = raw.trimEnd();
+    if (!l) { addLine('\u00a0'); return; }
 
-function openInNewTab(url) {
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function fadeAndRedirect(url) {
-  document.body.classList.add('fade-out');
-  setTimeout(() => {
-    try { window.top.location.href = url; }
-    catch (e) { window.location.href = url; }
-  }, 450);
-}
-
-function copyToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text);
-  }
-  return new Promise((resolve, reject) => {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    try {
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      ok ? resolve() : reject();
-    } catch (e) {
-      document.body.removeChild(ta);
-      reject(e);
+    // email
+    if (/^[\w.+-]+@[\w-]+\.\w+$/.test(l.trim())) {
+      const a = document.createElement('a');
+      a.href = 'mailto:' + l.trim();
+      a.textContent = '> ' + l.trim();
+      a.className = 'line link';
+      output.appendChild(a);
+      output.scrollTop = output.scrollHeight;
+      return;
     }
+
+    // plain text
+    addLine('> ' + l, 'ai');
   });
+  addLine('\u00a0');
 }
 
-function addEmailBlock() {
-  const emailLine = document.createElement('div');
-  emailLine.className = 'line';
-  emailLine.style.color = '#5DCAA5';
-  emailLine.style.cursor = 'pointer';
-
-  const status = document.createElement('span');
-  status.textContent = '  [tap to copy]';
-  status.style.color = 'rgba(255,255,255,0.4)';
-
-  emailLine.textContent = '> ' + config.email;
-  emailLine.appendChild(status);
-
-  emailLine.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    copyToClipboard(config.email).then(() => {
-      status.textContent = '  [copied]';
-      setTimeout(() => { status.textContent = '  [tap to copy]'; }, 1500);
-    });
-  });
-
-  output.appendChild(emailLine);
-  output.scrollTop = output.scrollHeight;
-}
-
-function showThinkingDots() {
+function showThinking() {
   const span = document.createElement('span');
   span.className = 'line dim';
   span.textContent = '>';
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
-  let dots = 0;
-  const interval = setInterval(() => {
-    dots = (dots + 1) % 4;
-    span.textContent = '>' + '.'.repeat(dots);
-  }, 300);
-  return { element: span, stop: () => clearInterval(interval) };
+  let d = 0;
+  const t = setInterval(() => { d = (d+1)%4; span.textContent = '>'+'.'.repeat(d); }, 300);
+  return { el: span, stop: () => clearInterval(t) };
 }
 
-const commands = {
-  help: () => addLines([
-    { text: 'available commands:', cls: 'dim' },
-    { text: '  whoami  •  readme  •  clear  •  uptime' }
-  ]),
-  clear: () => { output.innerHTML = ''; addLine(''); },
-  cls: () => commands.clear(),
-  whoami: () => {
-    addLine('redirecting...', 'dim');
-    setTimeout(() => fadeAndRedirect(config.desktopUrl), 600);
-  },
-  readme: () => addLines([
-    { text: 'this is the surface.' },
-    { text: 'the work is on desktop.' }
-  ]),
-  uptime: () => {
-    const born = new Date('1990-08-19T09:30:00Z');
-    const diff = new Date() - born;
-    const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-    const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
-    addLine(years + 'y ' + days + 'd', 'bright');
-    addLine('');
-  }
-};
+const cmdHistory = [];
+let cmdIdx = -1;
 
-function isContactIntent(query) {
-  const q = query.toLowerCase();
-  return config.contactKeywords.some(k => q.includes(k));
-}
-
-async function askAI(query) {
-  const thinking = showThinkingDots();
-  aiHistory.push({ role: 'user', content: query });
-
-  try {
-    const response = await fetch(config.apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        history: aiHistory.slice(-6),
-        isMobile: true,
-        linksShown
-      })
-    });
-
-    const data = await response.json();
-    const text = data.text;
-
-    thinking.stop();
-    thinking.element.remove();
-
-    if (text) {
-      aiHistory.push({ role: 'assistant', content: text });
-      if (aiHistory.length > 6) aiHistory.splice(0, 2);
-
-      const lines = text.split('\n').filter(l => l.trim());
-      lines.forEach(l => {
-        const urlMatch = l.trim().match(/(?:https?:\/\/)?alexcoman\.me\/[a-z0-9\-]+/i)
-          || l.trim().match(/^https?:\/\/\S+/);
-
-        if (urlMatch) {
-          const rawUrl = urlMatch[0];
-          const fullUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
-          if (!linksShown.includes(fullUrl)) linksShown.push(fullUrl);
-          const a = document.createElement('a');
-          a.href = fullUrl;
-          a.textContent = '> ' + rawUrl;
-          a.className = 'line ai-link';
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          output.appendChild(a);
-          output.scrollTop = output.scrollHeight;
-        } else if (l.trim().match(/^[\w.]+@[\w.]+\.\w+$/)) {
-          addEmailBlock();
-        } else {
-          addLine('> ' + l, 'ai');
-        }
-      });
-      addLine('');
-    } else {
-      addLine('> no response.', 'err');
-      addLine('');
-    }
-  } catch (e) {
-    thinking.stop();
-    thinking.element.remove();
-    addLine('> connection failed.', 'err');
-    addLine('');
-  }
-}
-
-input.addEventListener('keydown', e => {
+input.addEventListener('keydown', async (e) => {
   if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (!cmdHistory.length) return;
-    if (cmdHistoryIdx === -1) cmdHistoryIdx = cmdHistory.length;
-    cmdHistoryIdx = Math.max(0, cmdHistoryIdx - 1);
-    input.value = cmdHistory[cmdHistoryIdx] || '';
+    if (cmdIdx === -1) cmdIdx = cmdHistory.length;
+    input.value = cmdHistory[Math.max(0, --cmdIdx)];
     return;
   }
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    if (!cmdHistory.length || cmdHistoryIdx === -1) return;
-    cmdHistoryIdx++;
-    if (cmdHistoryIdx >= cmdHistory.length) { cmdHistoryIdx = -1; input.value = ''; }
-    else input.value = cmdHistory[cmdHistoryIdx];
+    if (cmdIdx === -1) return;
+    cmdIdx++;
+    input.value = cmdIdx >= cmdHistory.length ? (cmdIdx = -1, '') : cmdHistory[cmdIdx];
     return;
   }
   if (e.key !== 'Enter') return;
 
   const val = input.value.trim();
-  const valLower = val.toLowerCase();
   if (!val) return;
 
   cmdHistory.push(val);
-  cmdHistoryIdx = -1;
+  cmdIdx = -1;
   addLine('alex@coman ~ % ' + val, 'dim');
   input.value = '';
 
-  if (config.redirectCommands.includes(valLower)) {
-    addLine('redirecting...', 'dim');
-    setTimeout(() => fadeAndRedirect(config.desktopUrl), 800);
-    return;
+  // keep keyboard open
+  setTimeout(() => input.focus(), 50);
+
+  // local commands
+  if (val.toLowerCase() === 'clear') { output.innerHTML = ''; return; }
+
+  // AI
+  const thinking = showThinking();
+  history.push({ role: 'user', content: val });
+
+  try {
+    const res  = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: val, history: history.slice(-6) })
+    });
+    const data = await res.json();
+    thinking.stop();
+    thinking.el.remove();
+
+    const text = data.text || '';
+    history.push({ role: 'assistant', content: text });
+    if (history.length > 12) history.splice(0, 2);
+
+    renderResponse(text);
+  } catch {
+    thinking.stop();
+    thinking.el.remove();
+    addLine('> connection failed.', 'err');
+    addLine('\u00a0');
   }
-  if (commands[valLower]) { commands[valLower](); return; }
-  if (isContactIntent(val)) { addLine('> reach out:', 'ai'); addEmailBlock(); addLine(''); return; }
-  askAI(val);
 });
 </script>
 </body>
