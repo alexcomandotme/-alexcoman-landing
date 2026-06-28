@@ -40,10 +40,10 @@
     display: block;
     white-space: pre-wrap;
     word-break: break-word;
-    animation: fadein 0.4s ease both;
+    animation: fadein 0.5s ease both;
   }
   @keyframes fadein {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0; transform: translateY(5px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   #output .dim  { color: rgba(255,255,255,0.3); }
@@ -54,7 +54,7 @@
   .term-input-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     border-top: 0.5px solid rgba(255,255,255,0.12);
     padding: 1rem 0;
     flex-shrink: 0;
@@ -64,44 +64,38 @@
     color: rgba(255,255,255,0.3);
     white-space: nowrap;
     font-weight: 700;
+    flex-shrink: 0;
   }
   #term-input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
+    background: transparent;
     border: none;
     outline: none;
-    padding: 0;
-    font-size: 16px; /* prevent iOS zoom */
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.75);
+    flex: 1;
+    caret-color: rgba(255,255,255,0.7);
     -webkit-appearance: none;
+    border-radius: 0;
+    min-width: 0;
   }
-  #term-input::placeholder { color: rgba(255,255,255,0.25); }
+  #term-input::placeholder { color: rgba(255,255,255,0.2); }
 
-  /* blinking block cursor */
+  /* fake cursor — hidden when input is focused (native cursor takes over) */
   #cursor {
     display: inline-block;
     width: 8px;
-    height: 15px;
-    background: rgba(255,255,255,0.65);
-    vertical-align: middle;
-    animation: blink 1s step-end infinite;
+    height: 14px;
+    background: rgba(255,255,255,0.6);
     flex-shrink: 0;
+    animation: blink 1s step-end infinite;
+    transition: opacity 0.1s;
   }
-  #cursor.hidden { display: none; }
+  #cursor.hidden { opacity: 0; animation: none; }
   @keyframes blink {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0; }
-  }
-
-  /* typed text preview next to cursor */
-  #typed-preview {
-    font-size: 14px;
-    font-weight: 400;
-    color: rgba(255,255,255,0.75);
-    font-family: 'JetBrains Mono', monospace;
-    white-space: nowrap;
-    overflow: hidden;
   }
 </style>
 </head>
@@ -111,9 +105,8 @@
   <div id="output"></div>
   <div class="term-input-row">
     <span class="term-prompt">alex@coman ~ %</span>
-    <span id="typed-preview"></span>
     <span id="cursor"></span>
-    <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command..." />
   </div>
 </div>
 
@@ -123,7 +116,6 @@ const input    = document.getElementById('term-input');
 const output   = document.getElementById('output');
 const terminal = document.getElementById('terminal');
 const cursor   = document.getElementById('cursor');
-const preview  = document.getElementById('typed-preview');
 
 // ── iOS visual viewport ──
 if (window.visualViewport) {
@@ -137,45 +129,39 @@ if (window.visualViewport) {
   vv.addEventListener('scroll', onVV);
 }
 
-// ── tap to focus ──
+// ── fake cursor hides when iOS keyboard is open ──
+input.addEventListener('focus', () => cursor.classList.add('hidden'));
+input.addEventListener('blur',  () => cursor.classList.remove('hidden'));
+
+// ── tap terminal to focus ──
 terminal.addEventListener('click', (e) => {
   if (e.target.tagName !== 'A') input.focus();
 });
 
-// ── hide/show fake cursor when real keyboard is active ──
-input.addEventListener('focus', () => cursor.classList.add('hidden'));
-input.addEventListener('blur',  () => { cursor.classList.remove('hidden'); preview.textContent = ''; });
-
-// ── mirror typed text into preview span ──
-input.addEventListener('input', () => { preview.textContent = input.value; });
-
-// ── fade-in helper ──
+// ── fade lines ──
 function addLine(text, cls, delay) {
-  const span = document.createElement('span');
-  span.className = 'line' + (cls ? ' ' + cls : '');
-  span.textContent = text;
-  if (delay) span.style.animationDelay = delay + 'ms';
-  output.appendChild(span);
+  const el = document.createElement('span');
+  el.className = 'line' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+  if (delay) el.style.animationDelay = delay + 'ms';
+  output.appendChild(el);
   output.scrollTop = output.scrollHeight;
 }
 
-// ── render initial welcome with staggered fade ──
-const welcome = [
-  'hey — glad you stopped by.',
-  'alex kept this minimal on mobile.',
-  'the full experience is on desktop —',
-  "that's where the work lives.",
-];
-welcome.forEach((line, i) => addLine(line, 'ai', i * 120));
+// ── staggered welcome ──
+['hey — glad you stopped by.',
+ 'alex kept this minimal on mobile.',
+ 'the full experience is on desktop —',
+ "that's where the work lives."
+].forEach((l, i) => addLine(l, 'ai', i * 130));
 
 const history = [];
 
 function renderResponse(text) {
-  const lines = text.split('\n');
   let delay = 0;
-  lines.forEach(raw => {
+  text.split('\n').forEach(raw => {
     const l = raw.trimEnd();
-    if (!l) { addLine('\u00a0', '', delay); delay += 60; return; }
+    if (!l) { addLine('\u00a0', '', delay); delay += 50; return; }
     if (/^[\w.+-]+@[\w-]+\.\w+$/.test(l.trim())) {
       const a = document.createElement('a');
       a.href = 'mailto:' + l.trim();
@@ -187,20 +173,20 @@ function renderResponse(text) {
     } else {
       addLine(l, 'ai', delay);
     }
-    delay += 80;
+    delay += 90;
   });
   addLine('\u00a0', '', delay);
 }
 
 function showThinking() {
-  const span = document.createElement('span');
-  span.className = 'line dim';
-  span.textContent = '.';
-  output.appendChild(span);
+  const el = document.createElement('span');
+  el.className = 'line dim';
+  el.textContent = '.';
+  output.appendChild(el);
   output.scrollTop = output.scrollHeight;
   let d = 0;
-  const t = setInterval(() => { d=(d+1)%4; span.textContent='.'.repeat(d+1); }, 350);
-  return { el: span, stop: () => clearInterval(t) };
+  const t = setInterval(() => { d=(d+1)%4; el.textContent='.'.repeat(d+1); }, 350);
+  return { el, stop: () => clearInterval(t) };
 }
 
 input.addEventListener('keydown', async (e) => {
@@ -208,7 +194,6 @@ input.addEventListener('keydown', async (e) => {
   const val = input.value.trim();
   if (!val) return;
 
-  preview.textContent = '';
   addLine('> ' + val, 'dim');
   input.value = '';
   setTimeout(() => input.focus(), 50);
@@ -225,17 +210,14 @@ input.addEventListener('keydown', async (e) => {
       body: JSON.stringify({ query: val, history: history.slice(-6) })
     });
     const data = await res.json();
-    thinking.stop();
-    thinking.el.remove();
+    thinking.stop(); thinking.el.remove();
     const text = data.text || '';
     history.push({ role: 'assistant', content: text });
     if (history.length > 12) history.splice(0, 2);
     renderResponse(text);
   } catch {
-    thinking.stop();
-    thinking.el.remove();
+    thinking.stop(); thinking.el.remove();
     addLine('connection failed.', 'err');
-    addLine('\u00a0');
   }
 });
 </script>
