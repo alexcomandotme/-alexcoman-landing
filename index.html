@@ -16,40 +16,40 @@
     display: flex;
     flex-direction: column;
     font-family: 'JetBrains Mono', monospace;
-    padding: 1rem 1rem 0;
+    padding: 1.5rem 1.25rem 0;
   }
   .term-header {
-    font-size: 10px;
+    font-size: 11px;
     color: rgba(255,255,255,0.35);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 700;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
     flex-shrink: 0;
   }
   #output {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    font-size: 11px;
-    line-height: 1.6;
-    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.9;
+    font-weight: 400;
   }
   #output .line { display: block; white-space: pre-wrap; word-break: break-word; }
   #output .dim  { color: rgba(255,255,255,0.3); }
-  #output .ai   { color: rgba(255,255,255,0.6); }
+  #output .ai   { color: rgba(255,255,255,0.75); }
   #output .err  { color: #E24B4A; }
-  #output .link { color: #5DCAA5; }
+  #output .link { color: #5DCAA5; text-decoration: none; display: block; }
   .term-input-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     border-top: 0.5px solid rgba(255,255,255,0.12);
-    padding: 0.75rem 0;
+    padding: 1rem 0;
     flex-shrink: 0;
   }
   .term-prompt {
-    font-size: 10px;
+    font-size: 12px;
     color: rgba(255,255,255,0.3);
     white-space: nowrap;
     font-weight: 700;
@@ -60,14 +60,14 @@
     outline: none;
     font-family: 'JetBrains Mono', monospace;
     font-size: 16px;
-    font-weight: 700;
-    color: #fff;
+    font-weight: 400;
+    color: rgba(255,255,255,0.75);
     flex: 1;
     caret-color: #fff;
     -webkit-appearance: none;
     border-radius: 0;
   }
-  #term-input::placeholder { color: rgba(255,255,255,0.4); }
+  #term-input::placeholder { color: rgba(255,255,255,0.25); }
 </style>
 </head>
 <body>
@@ -75,8 +75,9 @@
   <div class="term-header">alexcoman.me</div>
   <div id="output">
     <span class="line ai">hey — glad you stopped by.</span>
-    <span class="line ai">alex intentionally kept this minimal on mobile.</span>
-    <span class="line ai">the full experience is on desktop — that's where the work lives.</span>
+    <span class="line ai">alex kept this minimal on mobile.</span>
+    <span class="line ai">the full experience is on desktop —</span>
+    <span class="line ai">that's where the work lives.</span>
     <span class="line">&nbsp;</span>
   </div>
   <div class="term-input-row">
@@ -86,7 +87,7 @@
 </div>
 
 <script>
-const API_URL = 'https://alexcoman-landing.vercel.app/api/ask';
+const API_URL  = 'https://alexcoman-landing.vercel.app/api/ask';
 const input    = document.getElementById('term-input');
 const output   = document.getElementById('output');
 const terminal = document.getElementById('terminal');
@@ -123,12 +124,12 @@ function renderResponse(text) {
     if (/^[\w.+-]+@[\w-]+\.\w+$/.test(l.trim())) {
       const a = document.createElement('a');
       a.href = 'mailto:' + l.trim();
-      a.textContent = '> ' + l.trim();
+      a.textContent = l.trim();
       a.className = 'line link';
       output.appendChild(a);
       output.scrollTop = output.scrollHeight;
     } else {
-      addLine('> ' + l, 'ai');
+      addLine(l, 'ai');
     }
   });
   addLine('\u00a0');
@@ -137,11 +138,11 @@ function renderResponse(text) {
 function showThinking() {
   const span = document.createElement('span');
   span.className = 'line dim';
-  span.textContent = '>';
+  span.textContent = '...';
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
   let d = 0;
-  const t = setInterval(() => { d=(d+1)%4; span.textContent='>'+'.'.repeat(d); }, 300);
+  const t = setInterval(() => { d=(d+1)%4; span.textContent='.'.repeat(d+1); }, 350);
   return { el: span, stop: () => clearInterval(t) };
 }
 
@@ -150,7 +151,7 @@ input.addEventListener('keydown', async (e) => {
   const val = input.value.trim();
   if (!val) return;
 
-  addLine('alex@coman ~ % ' + val, 'dim');
+  addLine('> ' + val, 'dim');
   input.value = '';
   setTimeout(() => input.focus(), 50);
 
@@ -175,7 +176,7 @@ input.addEventListener('keydown', async (e) => {
   } catch {
     thinking.stop();
     thinking.el.remove();
-    addLine('> connection failed.', 'err');
+    addLine('connection failed.', 'err');
     addLine('\u00a0');
   }
 });
