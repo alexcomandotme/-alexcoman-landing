@@ -13,7 +13,7 @@
   body {
     background: transparent;
     font-family: 'JetBrains Mono', monospace;
-    padding: 2rem;
+    padding: 1rem;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -22,17 +22,17 @@
   }
   body.fade-out { opacity: 0; }
   .term-header {
-    font-size: 15px;
+    font-size: 10px;
     color: rgba(255,255,255,0.35);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     font-weight: 700;
   }
   .term-output {
-    font-size: 15px;
+    font-size: 11px;
     color: rgba(255,255,255,0.6);
-    line-height: 2;
+    line-height: 1.6;
     font-weight: 700;
     position: relative;
     overflow-y: auto;
@@ -47,13 +47,13 @@
   .term-input-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 1.5rem;
+    gap: 6px;
+    margin-top: 1rem;
     border-top: 0.5px solid rgba(255,255,255,0.12);
-    padding-top: 1.5rem;
+    padding-top: 1rem;
   }
   .term-prompt {
-    font-size: 15px;
+    font-size: 10px;
     color: rgba(255,255,255,0.3);
     white-space: nowrap;
     font-weight: 700;
@@ -63,7 +63,7 @@
     border: none;
     outline: none;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
+    font-size: 11px;
     font-weight: 700;
     color: #fff;
     flex: 1;
@@ -80,12 +80,6 @@
     text-decoration: none;
   }
   .ai-link:hover { text-decoration: underline; }
-  @media (max-width: 640px) {
-    body { padding: 1.5rem 1.25rem; }
-    .term-output { font-size: 14px; max-height: 55vh; }
-    .term-prompt { font-size: 14px; }
-    #term-input { font-size: 16px; }
-  }
 </style>
 </head>
 <body>
@@ -265,25 +259,17 @@ const commands = {
     { text: '  funfact' },
     { text: '  clear' }
   ]),
-
   readme: () => addLines([
     { text: 'this is the surface.' },
     { text: 'the work lives somewhere else.' },
     { text: 'https://linkedin.com/in/alexcoman', cls: 'ok' }
   ]),
-
-  clear: () => {
-    output.innerHTML = '';
-    addLine('');
-  },
-
+  clear: () => { output.innerHTML = ''; addLine(''); },
   cls: () => commands.clear(),
-
   whoami: () => {
     addLine('redirecting to /desktop...', 'dim');
     setTimeout(() => fadeAndRedirect(config.desktopUrl), 600);
   },
-
   uptime: () => {
     clearUptime();
     const span = document.createElement('span');
@@ -294,13 +280,11 @@ const commands = {
     addLine('');
     uptimeInterval = setInterval(() => { span.textContent = getUptime(); }, 1000);
   },
-
   funfact: () => {
     const pick = config.funfacts[Math.floor(Math.random() * config.funfacts.length)];
     addLine(pick);
     addLine('');
   },
-
   sayhello: () => {
     addLine('> hello!', 'ai');
     askAI('hello');
@@ -327,10 +311,10 @@ async function askAI(query) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        query: query,
+        query,
         history: aiHistory.slice(-6),
         isMobile: window.innerWidth < 768,
-        linksShown: linksShown
+        linksShown
       })
     });
 
@@ -347,15 +331,12 @@ async function askAI(query) {
       const lines = text.split('\n').filter(l => l.trim());
 
       lines.forEach(l => {
-        // URL pattern — alexcoman.me/... or https://...
         const urlMatch = l.trim().match(/(?:https?:\/\/)?alexcoman\.me\/[a-z0-9\-]+/i)
           || l.trim().match(/^https?:\/\/\S+/);
 
         if (urlMatch) {
           const rawUrl = urlMatch[0];
           const fullUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
-
-          // track shown links
           if (!linksShown.includes(fullUrl)) linksShown.push(fullUrl);
 
           const a = document.createElement('a');
@@ -364,15 +345,9 @@ async function askAI(query) {
           a.className = 'line ai-link';
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
-          // open in new tab on click, don't navigate away
-          a.addEventListener('click', e => {
-            e.preventDefault();
-            openInNewTab(fullUrl);
-          });
+          a.addEventListener('click', e => { e.preventDefault(); openInNewTab(fullUrl); });
           output.appendChild(a);
           output.scrollTop = output.scrollHeight;
-
-          // auto-open in new tab when AI returns a link
           openInNewTab(fullUrl);
 
         } else if (l.trim().match(/^[\w.]+@[\w.]+\.\w+$/)) {
@@ -416,12 +391,8 @@ input.addEventListener('keydown', e => {
     e.preventDefault();
     if (cmdHistory.length === 0 || cmdHistoryIdx === -1) return;
     cmdHistoryIdx++;
-    if (cmdHistoryIdx >= cmdHistory.length) {
-      cmdHistoryIdx = -1;
-      input.value = '';
-    } else {
-      input.value = cmdHistory[cmdHistoryIdx];
-    }
+    if (cmdHistoryIdx >= cmdHistory.length) { cmdHistoryIdx = -1; input.value = ''; }
+    else input.value = cmdHistory[cmdHistoryIdx];
     return;
   }
 
@@ -446,15 +417,8 @@ input.addEventListener('keydown', e => {
     return;
   }
 
-  if (commands[valLower]) {
-    commands[valLower]();
-    return;
-  }
-
-  if (isContactIntent(val)) {
-    handleContact();
-    return;
-  }
+  if (commands[valLower]) { commands[valLower](); return; }
+  if (isContactIntent(val)) { handleContact(); return; }
 
   askAI(val);
 });
