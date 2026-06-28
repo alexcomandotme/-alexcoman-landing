@@ -63,11 +63,13 @@
     border: none;
     outline: none;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 16px; /* must be 16px+ to prevent iOS auto-zoom */
     font-weight: 700;
     color: #fff;
     flex: 1;
     caret-color: #fff;
+    transform: scale(0.6875); /* 11/16 = visually 11px */
+    transform-origin: left center;
   }
   #term-input::placeholder {
     color: rgba(255,255,255,0.5);
