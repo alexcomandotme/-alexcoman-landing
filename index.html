@@ -10,6 +10,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; background: transparent; }
+
   #terminal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -35,11 +36,21 @@
     line-height: 1.9;
     font-weight: 400;
   }
-  #output .line { display: block; white-space: pre-wrap; word-break: break-word; }
+  #output .line {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+    animation: fadein 0.4s ease both;
+  }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
   #output .dim  { color: rgba(255,255,255,0.3); }
   #output .ai   { color: rgba(255,255,255,0.75); }
   #output .err  { color: #E24B4A; }
   #output .link { color: #5DCAA5; text-decoration: none; display: block; }
+
   .term-input-row {
     display: flex;
     align-items: center;
@@ -63,26 +74,50 @@
     font-weight: 400;
     color: rgba(255,255,255,0.75);
     flex: 1;
-    caret-color: #fff;
+    caret-color: transparent; /* we use our own cursor */
     -webkit-appearance: none;
     border-radius: 0;
+    width: 1px; /* collapsed but focusable */
   }
   #term-input::placeholder { color: rgba(255,255,255,0.25); }
+
+  /* blinking block cursor */
+  #cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: rgba(255,255,255,0.65);
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+    flex-shrink: 0;
+  }
+  #cursor.hidden { display: none; }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* typed text preview next to cursor */
+  #typed-preview {
+    font-size: 14px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.75);
+    font-family: 'JetBrains Mono', monospace;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
 <div id="terminal">
   <div class="term-header">alexcoman.me</div>
-  <div id="output">
-    <span class="line ai">hey — glad you stopped by.</span>
-    <span class="line ai">alex kept this minimal on mobile.</span>
-    <span class="line ai">the full experience is on desktop —</span>
-    <span class="line ai">that's where the work lives.</span>
-    <span class="line">&nbsp;</span>
-  </div>
+  <div id="output"></div>
   <div class="term-input-row">
     <span class="term-prompt">alex@coman ~ %</span>
-    <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command..." />
+    <span id="typed-preview"></span>
+    <span id="cursor"></span>
+    <input id="term-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
   </div>
 </div>
 
@@ -91,7 +126,10 @@ const API_URL  = 'https://alexcoman-landing.vercel.app/api/ask';
 const input    = document.getElementById('term-input');
 const output   = document.getElementById('output');
 const terminal = document.getElementById('terminal');
+const cursor   = document.getElementById('cursor');
+const preview  = document.getElementById('typed-preview');
 
+// ── iOS visual viewport ──
 if (window.visualViewport) {
   const vv = window.visualViewport;
   function onVV() {
@@ -103,42 +141,65 @@ if (window.visualViewport) {
   vv.addEventListener('scroll', onVV);
 }
 
+// ── tap to focus ──
 terminal.addEventListener('click', (e) => {
   if (e.target.tagName !== 'A') input.focus();
 });
 
-const history = [];
+// ── hide/show fake cursor when real keyboard is active ──
+input.addEventListener('focus', () => cursor.classList.add('hidden'));
+input.addEventListener('blur',  () => { cursor.classList.remove('hidden'); preview.textContent = ''; });
 
-function addLine(text, cls) {
+// ── mirror typed text into preview span ──
+input.addEventListener('input', () => { preview.textContent = input.value; });
+
+// ── fade-in helper ──
+function addLine(text, cls, delay) {
   const span = document.createElement('span');
   span.className = 'line' + (cls ? ' ' + cls : '');
   span.textContent = text;
+  if (delay) span.style.animationDelay = delay + 'ms';
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
 }
 
+// ── render initial welcome with staggered fade ──
+const welcome = [
+  'hey — glad you stopped by.',
+  'alex kept this minimal on mobile.',
+  'the full experience is on desktop —',
+  "that's where the work lives.",
+];
+welcome.forEach((line, i) => addLine(line, 'ai', i * 120));
+
+const history = [];
+
 function renderResponse(text) {
-  text.split('\n').forEach(raw => {
+  const lines = text.split('\n');
+  let delay = 0;
+  lines.forEach(raw => {
     const l = raw.trimEnd();
-    if (!l) { addLine('\u00a0'); return; }
+    if (!l) { addLine('\u00a0', '', delay); delay += 60; return; }
     if (/^[\w.+-]+@[\w-]+\.\w+$/.test(l.trim())) {
       const a = document.createElement('a');
       a.href = 'mailto:' + l.trim();
       a.textContent = l.trim();
       a.className = 'line link';
+      a.style.animationDelay = delay + 'ms';
       output.appendChild(a);
       output.scrollTop = output.scrollHeight;
     } else {
-      addLine(l, 'ai');
+      addLine(l, 'ai', delay);
     }
+    delay += 80;
   });
-  addLine('\u00a0');
+  addLine('\u00a0', '', delay);
 }
 
 function showThinking() {
   const span = document.createElement('span');
   span.className = 'line dim';
-  span.textContent = '...';
+  span.textContent = '.';
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
   let d = 0;
@@ -151,6 +212,7 @@ input.addEventListener('keydown', async (e) => {
   const val = input.value.trim();
   if (!val) return;
 
+  preview.textContent = '';
   addLine('> ' + val, 'dim');
   input.value = '';
   setTimeout(() => input.focus(), 50);
